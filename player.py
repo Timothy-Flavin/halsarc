@@ -3,17 +3,16 @@ import random
 
 class player(object):
 
-  def __init__(self, team, game, x=0, y=0, speed=10, size=20):
+  def __init__(self, team, game, pos = np.array([0,0]), speed=10, size=20):
     self.team = team
     self.game = game
     self.speed = speed
     self.size = size
-    self.x = x
-    self.y = y
+    self.pos = pos
     self.destroyed = False
   
   def render(self, color, screen):
-    self.game.draw.circle(screen, color, (self.x, self.y), self.size)
+    self.game.draw.circle(screen, color, (self.pos[0], self.pos[1]), self.size)
 
   def update(self, delta_time, game_instance):
     self.choose_action(game_instance)
@@ -24,8 +23,7 @@ class player(object):
     return self.cur_action
 
   def take_action(self, delta_time):
-    self.x += self.cur_action[0] * self.speed * delta_time
-    self.y += self.cur_action[1] * self.speed * delta_time
+    self.pos += self.cur_action * self.speed * delta_time
   
   def destroy(self):
     self.destroyed = True
