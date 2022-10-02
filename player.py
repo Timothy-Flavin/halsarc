@@ -1,25 +1,31 @@
 import numpy as np
 import random 
+from entity import entity
 
-class player(object):
-
+class player(entity):
   def __init__(self, team, game, pos = np.array([0,0]), speed=10, size=20):
-    self.team = team
-    self.game = game
-    self.speed = speed
-    self.size = size
-    self.pos = pos
-    self.destroyed = False
-  
-  def render(self, color, screen):
-    self.game.draw.circle(screen, color, (self.pos[0], self.pos[1]), self.size)
+    entity.__init__(self, team, game, pos, 20, 10)
 
   def update(self, delta_time, game_instance):
     self.choose_action(game_instance)
     self.take_action(delta_time)
 
   def choose_action(self, game_instance):
-    self.cur_action = np.array([1-2*random.random(), 1-2*random.random()])
+    dx = 0
+    dy = 0
+    
+    if game_instance.player_input['S']:
+      dy+=1
+    if game_instance.player_input['W']:
+      dy-=1
+    if game_instance.player_input['D']:
+      dx+=1
+    if game_instance.player_input['A']:
+      dx-=1
+    temp = np.array([dx, dy], dtype="float32")
+    if dx != 0 or dy != 0:
+      temp/=np.linalg.norm(temp)
+    self.cur_action = temp
     return self.cur_action
 
   def take_action(self, delta_time):
