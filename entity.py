@@ -27,3 +27,4 @@ class entity(object):
   
   def destroy(self):
     self.destroyed = True
+    print("I got destroyed")

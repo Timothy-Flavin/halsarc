@@ -1,5 +1,6 @@
 import numpy as np
-import random 
+import random
+from projectile import projectile 
 from entity import entity
 
 class player(entity):
@@ -26,10 +27,15 @@ class player(entity):
     if dx != 0 or dy != 0:
       temp/=np.linalg.norm(temp)
     self.cur_action = temp
+
+    if game_instance.clicked==True:
+      print(game_instance.mouse_pos)
+      game_instance.objects.append(projectile(self.team,self.game,np.copy(self.pos),20,np.copy(self.cur_action), 10))
+
     return self.cur_action
 
   def take_action(self, delta_time):
     self.pos += self.cur_action * self.speed * delta_time
-  
+
   def destroy(self):
     self.destroyed = True

@@ -1,6 +1,6 @@
 from logging import exception
 import numpy as np
-from Goblins.entity import entity
+from entity import entity
 
 class projectile(entity):
   def __init__(self, team, game, pos = np.array([0,0]), speed=10, dir=np.array([0,0]), damage=10):
@@ -10,12 +10,14 @@ class projectile(entity):
   
   def update(self, delta_time, game_instance):
     self.pos+=self.speed*self.dir*delta_time
+    self.check_collision(game_instance)
 
   def check_collision(self, game_instance):
     for obj in game_instance.objects:
-      if obj.team != self.team and obj.combat is not None:
-        obj.combat.takeHit(self.damage)
-      self.destroy()
+      if obj.team != self.team and np.sum(np.square(obj.pos-self.pos)) < pow(obj.size+self.size,2):
+        #if obj.team != self.team and obj.combat is not None:
+        #obj.combat.takeHit(self.damage)
+        self.destroy()
 
   def choose_action(self, game_instance):
     exception("Projectiles do not choose actions but choose_action was called on this projectile")

@@ -17,11 +17,13 @@ class game_instance():
     self.objects = objects
     self.screen = screen
     self.player_input = {'W': False, 'A': False, 'S':False, 'D': False}
+    self.mouse_pos=None
+    self.clicked=False
 
   def game_logic(self, delta_time):
     for i in self.objects:
       if i.destroyed:
-        self.objects.pop(i)
+        self.objects.remove(i)
       else:  
         i.update(delta_time, self)
 
@@ -45,6 +47,13 @@ class game_instance():
     if self.display:
       pygame.display.flip()
   
+  def handle_mouse_event(self, event):
+    if event.type == pygame.MOUSEBUTTONDOWN and not self.clicked:
+      self.mouse_pos = pygame.mouse.get_pos()
+      self.clicked = True
+    elif event.type == pygame.MOUSEBUTTONUP:
+      self.clicked = False
+ 
   # Set the state of user input
   def handle_key_press(self, event):
     handled = False
@@ -88,8 +97,9 @@ while game.running:
   for event in pygame.event.get():
     if event.type == pygame.QUIT:
       game.running = False
-    if game.handle_key_press(event):
-      continue
+    game.handle_key_press(event)
+    game.handle_mouse_event(event)
+    
       # Done! Time to quit.
   game.game_logic(delta_time)
 
