@@ -6,8 +6,11 @@ from entity import entity
 class player(entity):
   def __init__(self, team, game, pos = np.array([0,0]), speed=10, size=20):
     entity.__init__(self, team, game, pos, 20, 10)
+    self.cooldown = 0.2
+    self.cd_left = 0
 
   def update(self, delta_time, game_instance):
+    self.cd_left-=delta_time
     self.choose_action(game_instance)
     self.take_action(delta_time)
 
@@ -28,9 +31,13 @@ class player(entity):
       temp/=np.linalg.norm(temp)
     self.cur_action = temp
 
-    if game_instance.clicked==True:
+    if game_instance.clicked==True and self.cd_left<0:
+      self.cd_left = self.cooldown
       print(game_instance.mouse_pos)
-      game_instance.objects.append(projectile(self.team,self.game,np.copy(self.pos),20,np.copy(self.cur_action), 10))
+      proj_dir = (game_instance.mouse_pos-self.pos)
+      proj_dir /= np.linalg.norm(proj_dir)
+      print(proj_dir)
+      game_instance.objects.append(projectile(self.team,self.game,np.copy(self.pos),40,np.copy( proj_dir ), 10))
 
     return self.cur_action
 

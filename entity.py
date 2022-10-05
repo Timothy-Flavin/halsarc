@@ -12,7 +12,7 @@ class entity(object):
     self.combat = None
   
   def render(self, color, screen):
-    self.game.draw.circle(screen, color, (self.pos[0], self.pos[1]), self.size)
+    self.game.draw.circle(screen, color, center=(float(self.pos[0]), float(self.pos[1])), radius=self.size)
 
   def update(self, delta_time, game_instance):
     self.choose_action(game_instance)
