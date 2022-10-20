@@ -10,6 +10,7 @@ class entity(object):
     self.pos = pos
     self.destroyed = False
     self.combat = None
+    self.id=-1
   
   def render(self, color, screen):
     self.game.draw.circle(screen, color, center=(float(self.pos[0]), float(self.pos[1])), radius=self.size)

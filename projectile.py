@@ -14,9 +14,10 @@ class projectile(entity):
 
   def check_collision(self, game_instance):
     for obj in game_instance.objects:
+      if obj.team != self.team and obj.combat is not None and np.sum(np.square(obj.pos-self.pos)) < pow(obj.size+self.size,2):
+        obj.combat.take_hit(self.damage)
+        self.destroy()
       if obj.team != self.team and np.sum(np.square(obj.pos-self.pos)) < pow(obj.size+self.size,2):
-        #if obj.team != self.team and obj.combat is not None:
-        #obj.combat.takeHit(self.damage)
         self.destroy()
 
   def choose_action(self, game_instance):

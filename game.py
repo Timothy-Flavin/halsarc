@@ -19,6 +19,18 @@ class game_instance():
     self.player_input = {'W': False, 'A': False, 'S':False, 'D': False}
     self.mouse_pos=None
     self.clicked=False
+    self.current_id=1
+
+  def add_entity(self, obj):
+    obj.id = self.current_id
+    self.current_id += 1 
+    self.objects.append(obj)
+
+  def get_entity_by_id(self, id):
+    for i in self.objects:
+      if i.id == id:
+        return i
+    return None
 
   def game_logic(self, delta_time):
     for i in self.objects:
