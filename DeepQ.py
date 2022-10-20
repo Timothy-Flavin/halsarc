@@ -2,6 +2,7 @@ import numpy as np
 import random
 from projectile import projectile 
 from entity import entity
+from NeuralVisionSimple import encode_state
 
 class deepq(entity):
   def __init__(self, team, game, pos = np.array([0,0]), speed=10, size=20):

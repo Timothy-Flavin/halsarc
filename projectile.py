@@ -3,7 +3,7 @@ import numpy as np
 from entity import entity
 
 class projectile(entity):
-  def __init__(self, team, game, pos = np.array([0,0]), speed=10, dir=np.array([0,0]), damage=10):
+  def __init__(self, team, game, pos = np.array([0,0]), speed=10, dir=np.array([0,0]), damage=10, entity_type="projectile"):
     entity.__init__(self, team, game, pos, speed, 4)
     self.dir = dir
     self.damage=damage

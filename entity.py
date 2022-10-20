@@ -2,7 +2,9 @@ import numpy as np
 import random
 
 class entity(object):
-  def __init__(self, team, game, pos = np.array([0,0], dtype=np.float32), speed=10, size=20):
+  types = ["unlisted","combatant", "projectile"]
+
+  def __init__(self, team, game, pos = np.array([0,0], dtype=np.float32), speed=10, size=20, entity_type="unlisted"):
     self.team = team
     self.game = game
     self.speed = speed
@@ -11,6 +13,7 @@ class entity(object):
     self.destroyed = False
     self.combat = None
     self.id=-1
+    self.entity_type = "unlisted"
   
   def render(self, color, screen):
     self.game.draw.circle(screen, color, center=(float(self.pos[0]), float(self.pos[1])), radius=self.size)
