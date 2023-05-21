@@ -9,9 +9,47 @@ import numpy as np
 # Set up the drawing window
 screen = pygame.display.set_mode([500, 500])
 
+class Tile():
+  def __init__(self, agent_speeds = [1,1,1], agent_visibe = [1,1,1], border_tiles=["Plains", "Hills","River","Mountain","Ocean","Forest","HillyForest","Shore"], flamable=True, color=[150,150,150]):
+    self.agent_speeds = np.array(agent_speeds)
+    self.agent_visibe = np.array(agent_visibe)
+    self.flamable = flamable
+    self.color = color
+  def legal(self, )
+
+class Searcher():
+  # Speed is how many times per frame the agent can move
+  def __init__(self, speed=0.1, comspeed=1.0/30.0, view_range=4, view_resolution=1, operation_time=200):
+    self.speed = speed
+    self.comspeed = comspeed
+    self.view_range = view_range
+    self.view_resolution = view_resolution
+    self.operation_time = operation_time
+    self.time_left = operation_time
+
+
 class game_instance():
-  # Run until the user asks to quit
-  def __init__(self, screen, display=False, objects=[]):
+  # Run until the user asks to quit  
+  tile_names = ["Plains", "Hills","River","Mountain","Ocean","Forest","HillyForest","Shore"]
+  agent_names = ["Human", "RoboDog", "Drone"]
+  tile_types = {
+    "Plains": Tile(border_tiles=["Plains","Hills","River","Forest","HillyForest"]),
+    "Hills": Tile(border_tiles=["Plains", "Hills","River","Mountain","HillyForest"], agent_speeds = [1,0.5,1]),
+    "River": Tile(border_tiles=["Plains", "Hills","River","Mountain","Ocean","Shore"], agent_speeds = [1,1,1]),
+    "Mountain": Tile(border_tiles=["Hills","River","Mountain","HillyForest"], agent_speeds = [1,1,1]),
+    "Ocean": Tile(border_tiles=["Ocean","Shore"], agent_speeds = [1,1,1]),
+    "Forest": Tile(border_tiles=["Plains","River","Forest","HillyForest"], agent_speeds = [1,1,1]),
+    "HillyForest": Tile(border_tiles=["Hills","Mountain","Forest","HillyForest"], agent_speeds = [1,1,1]),
+    "Shore": Tile(border_tiles=["Plains","River","Ocean","Shore"], agent_speeds = [1,1,1]),
+  }
+  Agent_types = {
+    "Human": Searcher(view_resolution=3),
+    "RoboDog": Searcher(speed=0.05, comspeed=1.0/5.0, view_range=3, view_resolution=2, operation_time=150),
+    "Drone": Searcher(speed=0.5, comspeed=1.0/5.0, view_range=12, view_resolution=1, operation_time=100)
+  }
+
+  
+  def __init__(self, screen, display=False, objects=[], map=None, map_size = [32,32]):
     self.display = display
     self.running = True
     self.objects = objects
@@ -20,6 +58,11 @@ class game_instance():
     self.mouse_pos=None
     self.clicked=False
     self.current_id=1
+    if map is None:
+      self.map = self.generate_map(map_size)
+
+
+  def generate_map(self, map_size)
 
   def add_entity(self, obj):
     obj.id = self.current_id
