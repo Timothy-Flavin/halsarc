@@ -20,13 +20,13 @@ from searcher import searcher
 from poi import person_of_interest
 
 class sar_env():
-  def __init__(self, display=False, tile_map=None, level_name="Island", agent_names=["Human","RoboDog","Drone"], poi_names=["Child","Child","Adult"]):
+  def __init__(self, display=False, tile_map=None, level_name="Island", agent_names=["Human","RoboDog","Drone"], poi_names=["Child","Child","Adult"], seed=0):
+    random.seed(seed)
     self.poi_names = poi_names
     self.agent_names = agent_names
     agent_blueprint_url=f"../LevelGen/{level_name}/Agents.json"
     tiles_url=f"../LevelGen/{level_name}/Tiles.json"
     hidden_url=f"../LevelGen/{level_name}/Hidden_Entities.json"
-    random.seed(0)
     self.display = display
     if tile_map is not None:
       self.screen = pygame.display.set_mode([tile_map.shape[1]*10, tile_map.shape[0]*10])
