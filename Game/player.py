@@ -5,7 +5,7 @@ from projectile import projectile
 
 class player(entity):
   def __init__(self, team, game, pos = np.array([0,0]), speed=10, size=20, entity_type="combatant"):
-    entity.__init__(self, team, game, pos, speed, 10)
+    entity.__init__(self, team, game, pos, speed, size, "player")
     self.cooldown = 0.2
     self.cd_left = 0
 

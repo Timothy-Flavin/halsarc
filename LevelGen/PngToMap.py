@@ -2,13 +2,13 @@ from PIL import Image
 import numpy as np
 import json
 
-im = Image.open("map1.png")
+im = Image.open("Island/map.png")
 print(im)
 rawmap = np.array(im)
 print(rawmap)
 print(rawmap.shape)
 
-tile_list = json.load(open("Tiles.json"))
+tile_list = json.load(open("Island/Tiles.json"))
 numpy_map = np.zeros((rawmap.shape[0],rawmap.shape[1]), np.int64)-1
 
 for r in range(rawmap.shape[0]):
@@ -19,4 +19,4 @@ for r in range(rawmap.shape[0]):
 
 for r in range(rawmap.shape[0]):
   print(numpy_map[r,:])
-np.save("HandMadeMap.npy",numpy_map)
+np.save("Island/Map.npy",numpy_map)

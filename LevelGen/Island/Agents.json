@@ -1,11 +1,10 @@
-[
-  {
-    "name": "Human",
+{
+  "Human": {
     "view_range":3,
     "speed":1.0,
     "active_time":5.0,
     "grounded":true,
-    "color":[50,200,100,255],
+    "color":[255,195,170,255],
     "speeds": {
       "grass":1.0,
       "river":0.2,
@@ -25,11 +24,10 @@
       "shore": 1.0
     }
   },
-  {
-    "name": "RoboDog",
+  "RoboDog": {
     "view_range":2.5,
     "speed":1.5,
-    "active_time":2.0,
+    "active_time":3.0,
     "grounded":true,
     "color":[200,200,30,255],
     "speeds": {
@@ -51,8 +49,7 @@
       "shore": 0.8
     }
   },
-  {
-    "name": "Drone",
+  "Drone": {
     "view_range":5,
     "speed":2.5,
     "active_time":2.0,
@@ -77,4 +74,4 @@
       "shore": 0.5
     }
   }
-]
+}

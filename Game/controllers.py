@@ -1,13 +1,13 @@
 import numpy as np
+import random
 import projectile
 
 class player_controller():
   def __init__(self, parent):
-    self.parent = parent
-  def choose_action(self, game_instance):
+    self.cur_action=np.zeros(2)
+  def choose_action(self, state, game_instance):
     dx = 0
     dy = 0
-    
     if game_instance.player_input['S']:
       dy+=1
     if game_instance.player_input['W']:
@@ -20,8 +20,30 @@ class player_controller():
     if dx != 0 or dy != 0:
       temp/=np.linalg.norm(temp)
     self.cur_action = temp
-
     return self.cur_action
 
-  def take_action(self, delta_time):
-    self.parent.pos += self.cur_action * self.parent.speed * self.parent.speed_multiplier
+class basic_controller():
+  def __init__(self, parent):
+    self.parent = parent
+    self.cur_action=np.zeros(2)
+  def choose_action(self, state, game_instance):
+    dx=random.randint(-1,1)
+    dy=random.randint(-1,1)
+    temp = np.array([dx, dy], dtype="float32")
+    if dx != 0 or dy != 0:
+      temp/=np.linalg.norm(temp)
+    self.cur_action = temp
+    return self.cur_action
+
+class agent_controller():
+  def __init__(self, parent):
+    self.parent = parent
+    self.cur_action=np.zeros(2)
+  def choose_action(self, game_instance):
+    dx=random.randint(-1,1)
+    dy=random.randint(-1,1)
+    temp = np.array([dx, dy], dtype="float32")
+    if dx != 0 or dy != 0:
+      temp/=np.linalg.norm(temp)
+    self.cur_action = temp
+    return self.cur_action
