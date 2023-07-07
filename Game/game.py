@@ -253,8 +253,9 @@ class sar_env():
   
 if __name__ == "__main__":
   agents = ["Human","RoboDog","Drone"]
+  pois = ["Child", "Child", "Adult"]
   premade_map = np.load("../LevelGen/Island/Map.npy")
-  game = sar_env(display=True, tile_map=premade_map, agent_names=agents)
+  game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois)
   state, info = game.start()
   controller = player_controller(None)
   terminated = False
@@ -265,4 +266,4 @@ if __name__ == "__main__":
     for i,a in enumerate(agents):
       actions[i] = controller.choose_action(state=state, game_instance=game)
     state, rewards, terminated, truncated, info =game.step(actions=actions, messages=messages)
-  pygame.quit()
+  
