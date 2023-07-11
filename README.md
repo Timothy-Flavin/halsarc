@@ -112,3 +112,11 @@ while not terminated:
   state, rewards, terminated, truncated, info =game.step(actions=actions, messages=messages)
 ```
 
+### Actions Shape
+Right now, the only actions are x and y direction magnitudes so the actions array is `[len(agents),2]`. This will change if more actions such as resting are added. messages are not yet defined. The state comes in two parts, the map part and the object part. 
+
+#### Map Part
+The map part consists of a grid for each agent with two channels of size `H = W = 2*max_effective_view_range + 1` where each grid is centered at it's agent. The max effective view range is the farthest that any of the agents could possibly see. For grounded agents this means the agent with the highest view range on the highest altitude tile. The channels are static and dynamic where static is tile id and dynamic is whether or not the tile has an ongoing event such as fire. For now dynamic is always zero. The final shape of this part is then `[num_agents, W, H, 2]`. 
+
+#### Object Part
+The object part of the state comes as an array `[num_agents, num_objects, 4]` 
