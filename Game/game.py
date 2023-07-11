@@ -20,8 +20,9 @@ from searcher import searcher
 from poi import person_of_interest
 
 class sar_env():
-  def __init__(self, display=False, tile_map=None, level_name="Island", agent_names=["Human","RoboDog","Drone"], poi_names=["Child","Child","Adult"], seed=0):
+  def __init__(self, display=False, tile_map=None, level_name="Island", agent_names=["Human","RoboDog","Drone"], poi_names=["Child","Child","Adult"], seed=0, record_memory=False):
     random.seed(seed)
+    self.record_memory = record_memory
     self.poi_names = poi_names
     self.agent_names = agent_names
     agent_blueprint_url=f"../LevelGen/{level_name}/Agents.json"
@@ -40,7 +41,7 @@ class sar_env():
     self.tiles = json.load(open(tiles_url))
     self.reset()
 
-  def step(self, actions, messages):
+  def step(self, actions, messages=None):
     self.actions = actions
     self.messages = self.next_messages
     self.next_messages = messages 
@@ -52,7 +53,7 @@ class sar_env():
         self.handle_mouse_event(event)
     
     self.game_logic(0.01)
-    print(f"rewards in step: {self.rewards}")
+    #print(f"rewards in step: {self.rewards}")
     if self.display:
       self.draw_game()
     state = self.make_state()
@@ -61,7 +62,7 @@ class sar_env():
   
   def get_viewable_tiles(self, agent):
     pos = agent.pos
-    row, col, tile = agent.get_tile_from_pos(pos, self)
+    row, col, tile = agent.get_tile_from_pos(self)
     tile_pos = [row,col]
     viewable = np.zeros((int(self.state_range*2+1),int(self.state_range*2+1)))-1
     for r in range(tile_pos[0]-self.state_range, tile_pos[0]+self.state_range+1):
@@ -70,7 +71,8 @@ class sar_env():
         if (((r-tile_pos[0])*self.tile_width)**2 + ((c-tile_pos[1])*self.tile_width)**2 <= agent.effective_view_range**2 
         and r>=0 and r<self.tile_map.shape[0] and c>=0 and c<self.tile_map.shape[1]):
           viewable[r-tile_pos[0]+self.state_range, c-tile_pos[1]+self.state_range] = self.tile_map[r,c]
-    return viewable
+          agent.memory[r,c]=1
+    return viewable, agent.memory
   
   def get_viewable_objects(self, a):
     object_state = np.zeros((len(self.objects),4))
@@ -87,12 +89,18 @@ class sar_env():
 
   def make_state(self):
     map_state = np.zeros((len(self.agents),int(self.state_range*2+1),int(self.state_range*2+1),2))
+    object_state = []
+    memory=[]
     for i,a in enumerate(self.agents):
-      map_state[i, :, :, 0] = self.get_viewable_tiles(a)
+      tiles, agent_memory = self.get_viewable_tiles(a)
+      map_state[i, :, :, 0] = tiles
       map_state[i,:,:,1] = self.get_dynamic_map(a)
-    object_state = self.get_viewable_objects(a)
-    return {"map_state":map_state,"object_state":object_state}
+      object_state.append(self.get_viewable_objects(a))
+      memory.append(agent_memory)
+    return {"view":map_state,"object_state":np.array(object_state), "memory":np.array(memory)}
+  
   def start(self):
+    self.reset()
     return self.make_state(), self
 
   def finished(self):
@@ -129,6 +137,7 @@ class sar_env():
     for agent_name in self.agent_names:
       agent = self.agent_blueprint[agent_name]
       self.agents.append(searcher(agent, agent_name, pygame)) 
+      self.agents[-1].memory = np.zeros((self.tile_map.shape[0], self.tile_map.shape[1]))
       self.add_entity(self.agents[-1])
       self.actions.append([random.random(),random.random()])
       if agent["grounded"]:
@@ -146,8 +155,8 @@ class sar_env():
       poi = self.hidden_blueprint[poiname]
       self.pois.append(person_of_interest(poi, poiname, pygame)) 
       self.add_entity(self.pois[-1])
-      self.pois[-1].pos = np.array([float(random.randint(100,self.screen.get_height()-100)), float(random.randint(100,self.screen.get_width()-100))], dtype=np.float32)
-    
+      self.pois[-1].pos = np.array([float(random.randint(100,self.screen.get_width()-100)), float(random.randint(100,self.screen.get_height()-100))], dtype=np.float32)
+      #print(f"pois : {self.pois[-1].pos}")
   def add_entity(self, obj):
     obj.id = self.current_id
     self.current_id += 1 
@@ -167,7 +176,7 @@ class sar_env():
     return None
 
   def game_logic(self, delta_time):
-    print("Set rewards to slight negative")
+    #print("Set rewards to slight negative")
     self.rewards=np.zeros(self.num_agents)
     for i,agent in enumerate(self.agents):
       if not agent.destroyed:
@@ -178,7 +187,7 @@ class sar_env():
         self.active_objects.remove(i)
       else:  
         i.update(delta_time, self)
-    print(f"rewards after update: {self.rewards}")
+    #print(f"rewards after update: {self.rewards}")
     if self.finished():
       self.rewards += self.final_rewards
       #self.reset()

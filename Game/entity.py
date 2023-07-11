@@ -30,17 +30,27 @@ class entity(object):
     self.cur_action = np.array([1-2*random.random(), 1-2*random.random()])
     return self.cur_action
 
-  def take_action(self, delta_time):
+  def take_action(self, game_instance):
     #print(f"pos {self.pos}, cur_act: {self.cur_action}, speed: {self.speed}, speedmult: {self.speed_multiplier}")
-    self.pos += self.cur_action * self.speed * self.speed_multiplier
+    scale = np.linalg.norm(self.cur_action)
+    dir = self.cur_action * self.speed * self.speed_multiplier * 2 
+    if scale > 0:
+      dir = dir / scale
+    #print(f"Dir: {dir}, pos: {self.pos} = {self.pos+dir}")
+    self.pos += dir
+    self.pos[0] = max(min(self.pos[0],game_instance.screen.get_width()-0.01),0)
+    self.pos[1] = max(min(self.pos[1],game_instance.screen.get_height()-0.01),0)
     
   
   def destroy(self):
     self.destroyed = True
-    print("I got destroyed")
+    #print("I got destroyed")
 
-  def get_tile_from_pos(self, pos, game_instance):
+  def get_tile_from_pos(self, game_instance):
     #print("entity get tile from pos")
+    #print(f"pos {self.pos[0]}, w: {game_instance.screen.get_width()}, tiles: {game_instance.tile_map.shape[1]}")
+    #print(f"pos {self.pos[1]}, w: {game_instance.screen.get_height()}, tiles: {game_instance.tile_map.shape[0]}")
+    
     #print(f"screen: {game_instance.screen}, tilemap: {game_instance.tile_map}")
     #print(f"{self.pos[0]} / {game_instance.screen.get_width()} * {game_instance.tile_map.shape[1]}")
     col = int(math.floor(self.pos[0]/game_instance.screen.get_width()*game_instance.tile_map.shape[1]))

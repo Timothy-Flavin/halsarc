@@ -28,7 +28,7 @@ class person_of_interest(entity):
   def update(self, delta_time, game_instance):
     #print("poi update")
     #print(f"screen: {game_instance.screen}, tilemap: {game_instance.tile_map}")
-    row, col, self.tile = self.get_tile_from_pos(self.pos, game_instance)
+    row, col, self.tile = self.get_tile_from_pos(game_instance)
     self.time_active+=1
     if self.time_active>self.active_time and self.hidden:
       self.destroy()
@@ -42,12 +42,9 @@ class person_of_interest(entity):
       temp/=np.linalg.norm(temp)
       self.cur_action = temp
       if self.hidden:
-        self.take_action(0.01)
+        self.take_action(game_instance)
     return self.cur_action
-
-  def take_action(self, delta_time):
-    self.pos += self.cur_action * self.speed * self.speed_multiplier
-
+  
   def render(self, color, screen, debug=False):
     #print(self.size)
     #print("poi render")

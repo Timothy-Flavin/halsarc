@@ -22,6 +22,7 @@ class searcher(entity):
     self.speed_multiplier = 1.0
     self.tile_num = 0
     self.effective_view_range = self.view_range
+    #self.memory = np.zeros(game.tile_map.shape[0], game.tile_map.shape[1])
     #print(list(agent_blueprint["speeds"].keys()))
     for k in list(agent_blueprint["speeds"].keys()):
       self.speeds[k] = agent_blueprint["speeds"][k]
@@ -30,11 +31,11 @@ class searcher(entity):
       self.visibilities[k] = agent_blueprint["visibilities"][k]
 
   def update(self, delta_time, game_instance):
-    self.take_action(delta_time)
+    self.take_action(game_instance)
     self.pos[0] = max(min(self.pos[0],game_instance.screen.get_width()-0.01),0)
     self.pos[1] = max(min(self.pos[1],game_instance.screen.get_height()-0.01),0)
-    row, col, self.tile = self.get_tile_from_pos(self.pos, game_instance)
-    self.time_active+=1
+    row, col, self.tile = self.get_tile_from_pos( game_instance)
+    self.time_active+=2
     if self.time_active>self.active_time:
       self.destroy()
       return
@@ -56,11 +57,11 @@ class searcher(entity):
           obj.hidden = False
 
   def render(self, color, screen, debug=False):
-    #print(self.size)
     self.game.draw.circle(screen, color, center=(float(self.pos[0]), float(self.pos[1])), radius=self.size)
     h = max(int(self.size/5),2)
     trect = self.game.Rect(self.pos[0]-self.size,self.pos[1]-self.size-h, int(self.size*2-self.size*2*self.time_active/self.active_time),h)
     self.game.draw.rect(screen, (0,100,250), trect)
+
   def debug_render(self, color, screen, debug=False):
     self.game.draw.circle(screen, (250,250,250,100), center=(float(self.pos[0]), float(self.pos[1])), radius=self.effective_view_range)
   
