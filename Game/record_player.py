@@ -9,7 +9,7 @@ game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names
 state, info = game.start()
 terminated = False
 dirs = ['w','a','s','d','wd','ds','sa','aw','']
-active_player = 2
+active_player = 1
 
 def player_controls(inp):
   dx = 0
@@ -67,7 +67,7 @@ while not terminated:
   elapsed = (time.time_ns()-start)//1000000
   #print(elapsed)
 
-  info.wait(10-elapsed)
+  info.wait(20-elapsed)
   #time.sleep(100-elapsed)
 
 action_record = np.array(action_record)
