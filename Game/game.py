@@ -20,6 +20,9 @@ from searcher import searcher
 from poi import person_of_interest
 
 class sar_env():
+  def wait(self, ms):
+    pygame.time.wait(ms)
+
   def __init__(self, display=False, tile_map=None, level_name="Island", agent_names=["Human","RoboDog","Drone"], poi_names=["Child","Child","Adult"], seed=0, record_memory=False):
     random.seed(seed)
     self.record_memory = record_memory
@@ -229,23 +232,23 @@ class sar_env():
       if event.key == pygame.K_w:
         self.player_input['W'] = True
       if event.key == pygame.K_a:
-        game.player_input['A'] = True
+        self.player_input['A'] = True
       if event.key == pygame.K_s:
-        game.player_input['S'] = True
+        self.player_input['S'] = True
       if event.key == pygame.K_d:
-        game.player_input['D'] = True
+        self.player_input['D'] = True
       if event.key == pygame.K_SPACE:
         self.debug_render = True
       handled=True
     elif event.type == pygame.KEYUP:
       if event.key == pygame.K_w:
-        game.player_input['W'] = False
+        self.player_input['W'] = False
       if event.key == pygame.K_a:
-        game.player_input['A'] = False
+        self.player_input['A'] = False
       if event.key == pygame.K_s:
-        game.player_input['S'] = False
+        self.player_input['S'] = False
       if event.key == pygame.K_d:
-        game.player_input['D'] = False
+        self.player_input['D'] = False
       if event.key == pygame.K_SPACE:
         self.debug_render = False
       handled=True
