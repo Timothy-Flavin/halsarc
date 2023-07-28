@@ -56,8 +56,8 @@ policies = {}
 optimizers = {}
 
 for a in agents:
-  policies[a] = policy_net(nn_state.shape[0], 40, 9)
-  optimizers[a] = torch.optim.Adam(policies[a].parameters())
+  policies[a] = policy_net(nn_state.shape[0], 80, 9)
+  optimizers[a] = torch.optim.Adam(policies[a].parameters(), lr=0.0001)
 
 # create an optimizer
 # initialize gamma and stats
