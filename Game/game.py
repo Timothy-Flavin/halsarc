@@ -44,16 +44,19 @@ class sar_env():
     self.tiles = json.load(open(tiles_url))
     self.reset()
 
-  def step(self, actions, messages=None):
-    self.actions = actions
-    self.messages = self.next_messages
-    self.next_messages = messages 
+  def look_for_key_press(self):
     for event in pygame.event.get():
       if event.type == pygame.QUIT:
         self.running = False
       if self.display:
         self.handle_key_press(event)
         self.handle_mouse_event(event)
+
+  def step(self, actions, messages=None):
+    self.actions = actions
+    self.messages = self.next_messages
+    self.next_messages = messages 
+    self.look_for_key_press()
     
     self.game_logic(0.01)
     #print(f"rewards in step: {self.rewards}")

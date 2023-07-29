@@ -1,6 +1,8 @@
 import numpy as np
 from game import sar_env
 import pickle
+import os
+
 
 agents = ["Human", "RoboDog", "Drone"]
 pois = ["Child", "Child", "Adult"]
@@ -10,6 +12,20 @@ state, info = game.start()
 terminated = False
 dirs = ['w','a','s','d','wd','ds','sa','aw','']
 active_player = 1
+ai_type="trees"
+
+sk_agents={}
+fdirs = os.listdir(f"../Agents/{ai_type}")
+for f in fdirs:
+  print(f)
+  try:
+    filehandler = open(f"../Agents/{ai_type}/{f}", 'rb') 
+    name = f.split("_")[0]
+    print(name)
+    print(f)
+    sk_agents[name]=(pickle.load(filehandler))
+  except:
+    print("crap") 
 
 def player_controls(inp):
   dx = 0
@@ -27,47 +43,79 @@ def player_controls(inp):
     temp/=np.linalg.norm(temp)
   return temp
 
+def class_to_action(action):
+  if action == 0: # none
+    return np.array([0,-1])
+  if action == 1: # w
+    return np.array([0,-1])
+  if action == 2: # wd
+    return np.array([1,-1])
+  if action == 3: # d
+    return np.array([1,0])
+  if action == 4: # ds
+    return np.array([1,1])
+  if action == 5: # s
+    return np.array([0,1])
+  if action == 6: # sa
+    return np.array([-1,1])
+  if action == 7: # a
+    return np.array([-1,0])
+  if action == 8: # aw
+    return np.array([-1,-1])
+
+
+
 import time
 state_record = []  # keeps a memory of the game states
 action_record = [] # keeps a memory of all the actions taken
 reward_record = [] # keeps a memory of the resulting rewards
-deltat = 0.1
+deltat = 100
+begin_sim=False
 
 while not terminated:
   start = time.time_ns()
-  state_record.append({
-    'view':state['view'][active_player],
-    'object_state':state['object_state'][active_player],
-    'memory':state['memory'][active_player],
-  })
-  #print(state_record[-1]['view'].shape)
-  #print(state_record[-1]['object_state'].shape)
-  #print(state_record[-1]['memory'].shape)
-  actions = np.zeros((len(agents),2))
-  messages = np.zeros((len(agents),2))
-  for i,a in enumerate(agents):
-    
-    dir=''
-    if active_player == i:
-      if info.player_input["W"]:
-        dir+="w"
-      if info.player_input["A"]:
-        dir+="a"
-      if info.player_input["S"]:
-        dir+="s"
-      if info.player_input["D"]:
-        dir+="d"
-    actions[i] = player_controls(dir)
-  state, rewards, terminated, truncated, info = game.step(actions=actions, messages=messages)
-  ##print(actions.shape)
-  #print(actions[active_player].shape)
-  #input()
-  action_record.append(np.copy(actions[active_player]))
-  reward_record.append(np.copy(rewards[active_player]))
+  # Don't step the environment until input is recorded
+  if not begin_sim:
+    info.look_for_key_press()
+    if (info.player_input["W"] 
+    or info.player_input["A"] 
+    or info.player_input["S"]  
+    or info.player_input["D"]):
+      begin_sim=True
+  else:
+    state_record.append({
+      'view':state['view'][active_player],
+      'object_state':state['object_state'][active_player],
+      'memory':state['memory'][active_player],
+    })
+    actions = np.zeros((len(agents),2))
+    messages = np.zeros((len(agents),2))
+    for i,a in enumerate(agents):
+      dir=''
+      if active_player == i:
+        if info.player_input["W"]:
+          dir+="w"
+        if info.player_input["A"]:
+          dir+="a"
+        if info.player_input["S"]:
+          dir+="s"
+        if info.player_input["D"]:
+          dir+="d"
+        actions[i] = player_controls(dir)
+      elif a in sk_agents:
+        sk_state = [np.concatenate((state['view'][i].flatten(),state['object_state'][i].flatten(),state['memory'][i].flatten()))]
+        actions[i] = class_to_action(sk_agents[a].predict(sk_state))
+      else:
+        actions[i] = player_controls(dir) # if not a player and no skmodel then do action ''
+    state, rewards, terminated, truncated, info = game.step(actions=actions, messages=messages)
+    ##print(actions.shape)
+    #print(actions[active_player].shape)
+    #input()
+    action_record.append(np.copy(actions[active_player]))
+    reward_record.append(np.copy(rewards[active_player]))
+  
   elapsed = (time.time_ns()-start)//1000000
-  #print(elapsed)
-
-  info.wait(20-elapsed)
+  info.wait(deltat-elapsed)
   #time.sleep(100-elapsed)
 
 action_record = np.array(action_record)
