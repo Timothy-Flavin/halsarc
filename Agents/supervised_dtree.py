@@ -3,7 +3,7 @@ import pickle
 from sklearn.tree import DecisionTreeClassifier as dtree
 
 
-agent="RoboDog"
+agent="Drone"
 
 har = np.load("../Game/"+agent+"_action_record.npy")
 hrr = np.load("../Game/"+agent+"_reward_record.npy")

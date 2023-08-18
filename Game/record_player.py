@@ -11,7 +11,7 @@ game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names
 state, info = game.start()
 terminated = False
 dirs = ['w','a','s','d','wd','ds','sa','aw','']
-active_player = 1
+active_player = 0
 ai_type="trees"
 
 sk_agents={}

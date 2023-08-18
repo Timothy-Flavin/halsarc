@@ -13,11 +13,13 @@ class policy_net(nn.Module):
   def __init__(self, nS, nH, nA): # nS: state space size, nH: n. of neurons in hidden layer, nA: size action space
     super(policy_net, self).__init__()
     self.h = nn.Linear(nS, nH)
+    self.h2 = nn.Linear(nH, nH)
     self.out = nn.Linear(nH, nA)
 
   # define forward pass with one hidden layer with ReLU activation and sofmax after output layer
   def forward(self, x):
     x = F.relu(self.h(x))
+    x = F.relu(self.h2(x))
     x = F.softmax(self.out(x), dim=1)
     return x
 
@@ -56,8 +58,14 @@ policies = {}
 optimizers = {}
 
 for a in agents:
-  policies[a] = policy_net(nn_state.shape[0], 80, 9)
-  optimizers[a] = torch.optim.Adam(policies[a].parameters(), lr=0.0001)
+  policies[a] = policy_net(nn_state.shape[0], 32, 9)
+  try:
+    pa = torch.load(f"./nets/{a}")
+    print(pa())
+    policies[a].load_state_dict(pa())
+  except:
+    print(f"Failed to load net for: {a}")
+  optimizers[a] = torch.optim.Adam(policies[a].parameters(), lr=0.001)
 
 # create an optimizer
 # initialize gamma and stats
