@@ -15,7 +15,6 @@ class policy_net(nn.Module):
     self.h = nn.Linear(nS, nH)
     self.h2 = nn.Linear(nH, nH)
     self.out = nn.Linear(nH, nA)
-
   # define forward pass with one hidden layer with ReLU activation and sofmax after output layer
   def forward(self, x):
     x = F.relu(self.h(x))

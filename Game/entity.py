@@ -3,22 +3,22 @@ import random
 import math
 
 class entity(object):
-  types = ["static_agent","learnable_agent","player","projectile","person_of_interest", "object_of_interest"]
+  types = ["static_agent","learnable_agent","player","person_of_interest","sign_of_life"]
 
-  def __init__(self, team, game, pos = np.array([0.0,0.0], dtype=np.float32), speed=10, size=20, entity_type="static_agent"):
-    self.team = team
+  def __init__(self, game, pos = np.array([0.0,0.0], dtype=np.float32), speed=10, size=20, entity_type="static_agent"):
     self.game = game
     self.speed = speed
     self.size = size
     self.pos = pos
     self.destroyed = False
-    self.combat = None
     self.id=-1
     self.entity_type = entity_type
     self.cur_action = np.zeros((2,),dtype=np.float32)
     self.speed_multiplier=1
-  def render(self, color, screen, debug=False):
+
+  def render(self, color, screen, pov=-1, debug=False):
     self.game.draw.circle(screen, color, center=(float(self.pos[0]), float(self.pos[1])), radius=self.size)
+  
   def debug_render(self, color, screen, debug=False):
     return
 
@@ -38,22 +38,15 @@ class entity(object):
       dir = dir / scale
     #print(f"Dir: {dir}, pos: {self.pos} = {self.pos+dir}")
     self.pos += dir
-    self.pos[0] = max(min(self.pos[0],game_instance.screen.get_width()-0.01),0)
-    self.pos[1] = max(min(self.pos[1],game_instance.screen.get_height()-0.01),0)
+    self.pos[0] = max(min(self.pos[0],game_instance.map_pixel_width-0.01),0)
+    self.pos[1] = max(min(self.pos[1],game_instance.map_pixel_height-0.01),0)
     
   
   def destroy(self):
     self.destroyed = True
-    #print("I got destroyed")
 
   def get_tile_from_pos(self, game_instance):
-    #print("entity get tile from pos")
-    #print(f"pos {self.pos[0]}, w: {game_instance.screen.get_width()}, tiles: {game_instance.tile_map.shape[1]}")
-    #print(f"pos {self.pos[1]}, w: {game_instance.screen.get_height()}, tiles: {game_instance.tile_map.shape[0]}")
-    
-    #print(f"screen: {game_instance.screen}, tilemap: {game_instance.tile_map}")
-    #print(f"{self.pos[0]} / {game_instance.screen.get_width()} * {game_instance.tile_map.shape[1]}")
-    col = int(math.floor(self.pos[0]/game_instance.screen.get_width()*game_instance.tile_map.shape[1]))
-    row = int(math.floor(self.pos[1]/game_instance.screen.get_height()*game_instance.tile_map.shape[0]))
+    col = int(math.floor(self.pos[0]/game_instance.map_pixel_width*game_instance.tile_map.shape[1]))
+    row = int(math.floor(self.pos[1]/game_instance.map_pixel_height*game_instance.tile_map.shape[0]))
     tile = game_instance.tiles[game_instance.tile_map[row,col]]
     return row, col, tile

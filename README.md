@@ -4,7 +4,7 @@ A group of agents is called a department and this repo is a MARL experiment usin
 ## Level Gen
 ### File Structure
 
-Every Level has 4 required files in order for the game to load and process them: **Agents.json**, **Hidden_Entities.json**, **Map.npy**, and **Tiles.json**.
+Every Level has 4 required files in order for the game to load and process them: **Agents.json**, **POI.json**, **Map.npy**, and **Tiles.json**.
 
 ### Agents.json
 This file describes the different kind of searhcing agents that can be drawn from when starting a level. These attributes are subject to change (mostly additions), but you will be notified if they are.
@@ -39,7 +39,7 @@ This file describes the different kind of searhcing agents that can be drawn fro
 }
 ```
 
-### Hidden_Entities.json
+### POI.json
 This file is used to describe the persons or points of interest in the world which are being searched for. So far only persons of interest are implemented.
 
 ```
