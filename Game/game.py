@@ -22,9 +22,259 @@ from sol import sign_of_life
 from message import Message
 import queue
 
+class Button():
+  def __init__(self, callback, x, y, text, font, w=None, h=None, color=[200,200,250], text_color=[255,255,255], hover_color=None, image=None, args=None):
+    self.hovered=False
+    self.callback = callback
+    self.args = args
+    self.x = x
+    self.y = y
+    self.font = font
+    self.color = color
+    self.text_color = text_color
+    self.text_height = font.get_height()
+    self.image = image
+    if hover_color is None:
+      self.hover_color=[]
+      for i in range(len(self.color)):
+        self.hover_color.append(max(self.color[i]-50,0))
+    else:
+      self.hover_color = hover_color
+    if w is None:
+      w = font.get_height()*len(text)
+    else:
+      self.w = w
+    if h is None:
+      self.h = int(self.text_height*1.2)
+    else:
+      self.h = h
+    self.text = text
+
+  def render(self, screen):
+    trect = pygame.Rect(self.x,self.y,self.w,self.h)
+    if self.hovered:
+      pygame.draw.rect(screen, self.hover_color, trect)
+    else:
+      pygame.draw.rect(screen, self.color, trect)
+    if self.image is not None:
+      screen.blit(self.image, (self.x,self.y))
+      #print(f"{self.x},{self.y}")
+    text_surface = self.font.render(self.text, False, self.text_color)
+    pd = (self.h-self.text_height)//2
+    screen.blit(text_surface, (self.x+pd,self.y+pd))
+
+  def handle_move(self, mouse_pos):
+    if mouse_pos[0] > self.x and mouse_pos[1] > self.y and mouse_pos[0]<self.x+self.w and mouse_pos[1] < self.y+self.h:
+      self.hovered = True
+    else:
+      self.hovered = False
+
+  def handle_press(self, mouse_pos):
+    if mouse_pos[0] > self.x and mouse_pos[1] > self.y and mouse_pos[0]<self.x+self.w and mouse_pos[1] < self.y+self.h:
+      if self.args is None:
+        self.callback(self)
+      else:
+        self.callback(self, self.args)
+      return True
+    return False
+
 class sar_env():
   def wait(self, ms):
     pygame.time.wait(ms)
+
+  def buttonback(self, button):
+    print(f"pressed {button.text}")
+
+  def __on_click_return_num__(self, button, args):
+    self.bnum = args
+
+  def __draw_ui_window__(self):
+    trect = pygame.Rect(self.tile_width*2,
+                        self.tile_width*2,
+                        self.map_pixel_width+self.w_pad-self.tile_width*4,
+                        self.map_pixel_height+self.h_pad-self.tile_width*4)
+    pygame.draw.rect(self.screen,[30,30,30],trect)
+
+  def __command_button__(self, button):
+    selected = False
+    mouse_loc = [0,0]
+    h = self.my_font.get_height()
+    mbtn = False
+    agent = -1
+    while not selected:
+      agent = -1
+      self.__draw_ui_window__()
+      for event in pygame.event.get():
+        self.handle_key_press(event)
+        if event.type == pygame.QUIT:
+          self.running = False
+          selected=True
+        if event.type == pygame.MOUSEMOTION:
+          mouse_loc = pygame.mouse.get_pos()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+          mbtn = True
+        if event.type == pygame.MOUSEBUTTONUP:
+          mbtn = False
+      
+      for i in range(len(self.agents)):
+        if mouse_loc[0] > self.tile_width*2 and \
+          mouse_loc[0] < self.map_pixel_width+self.w_pad-self.tile_width*2 and \
+          mouse_loc[1] > self.tile_width*2 + i*h and \
+          mouse_loc[1] < self.tile_width*2 + (i+1)*h:
+          trect = pygame.Rect(self.tile_width*2,
+                        self.tile_width*2+i*h,
+                        self.map_pixel_width+self.w_pad-self.tile_width*4,
+                        h)
+          pygame.draw.rect(self.screen,[60,60,60],trect)
+          agent = i
+          if mbtn:
+            selected = True
+        pygame.draw.circle(
+          self.screen, 
+          self.agents[i].color, 
+          center=(
+            float(self.tile_width*3)+h/3, 
+            float(self.tile_width*2+i*h)+h/2
+          ), 
+          radius=h/3
+        )
+        text_surface = self.my_font.render(self.agents[i].name, False, [250,250,250])
+        self.screen.blit(text_surface, (self.tile_width*2+2*h,self.tile_width*2+i*h))
+      pygame.display.flip()
+    
+    selected = False
+    self.bnum = -1
+    while not selected:
+      for event in pygame.event.get():
+        self.handle_key_press(event)
+        if event.type == pygame.QUIT:
+          self.running = False
+          selected=True
+        if event.type == pygame.MOUSEMOTION:
+          for b in self.dir_buttons:
+            b.handle_move(pygame.mouse.get_pos())
+        if event.type == pygame.MOUSEBUTTONDOWN and not self.clicked:
+          for b in self.dir_buttons:
+            b.handle_press(pygame.mouse.get_pos())
+      self.__draw_ui_window__()
+      for b in self.dir_buttons:
+        b.render(self.screen)
+      if self.bnum>-1:
+        selected=True
+      pygame.display.flip()
+      #TODO make message out of agent and self.bnum (direction)
+    s2 = np.sqrt(2)
+    dirs = [
+      np.array([0,-1]),
+      np.array([1,-1]) / s2,
+      np.array([1,0]),
+      np.array([1,1]) / s2,
+      np.array([0,1]),
+      np.array([-1,1]) / s2,
+      np.array([-1,0]),
+      np.array([-1,-1]) / s2,
+    ]
+    msg = Message(
+      game = self, 
+      name = self.agents[self.player].name,
+      m_type = 7,
+      x = int(self.agents[self.player].pos[0]),
+      y = int(self.agents[self.player].pos[1]),
+      dx = dirs[self.bnum][0],
+      dy = dirs[self.bnum][1],
+      agent_type=self.agents[self.player].a_type,
+      brain_type="Human",
+      to=self.agents[agent].name,
+      )
+    msg.__send__()
+
+  def __roger_button__(self,button):
+    self.__general_button__(button, 5)
+  def __sos_button__(self,button):
+    self.__general_button__(button, 0)
+  def __sol_button__(self,button):
+    self.__general_button__(button, 1)
+
+  def __found_button__(self, button):
+    self.__general_button__(button, 4,1)
+  
+  def __needs_button__(self, button):
+    self.__general_button__(button, 3,0)
+
+  def __saved_button(self, button):
+    self.__general_button__(button, 4,0)
+  
+  def __intent_button__(self, button):
+    msg = Message(
+      self,
+      self.agents[self.player].name,
+      6,
+      self.agents[self.player].pos[0],
+      self.agents[self.player].pos[1],
+      self.agents[self.player].cur_action[0],
+      self.agents[self.player].cur_action[1],
+      agent_type=self.agents[self.player].a_type,
+      brain_type="Human"
+    )
+    msg.__send__()
+
+  def __general_button__(self,button,msg_type, poi=-1):
+    msg = Message(
+      self,
+      self.agents[self.player].name,
+      msg_type,
+      self.agents[self.player].pos[0],
+      self.agents[self.player].pos[1],
+      agent_type=self.agents[self.player].a_type,
+      brain_type="Human",
+      poi_id=poi
+    )
+    msg.__send__()
+
+  def __make_buttons__(self):
+    names = ["SOS","Sol","Found POI","Help POI", "Saved", "Roger", "Going", "Go"]
+    widths = [58,  48,    112,        96,       72,      72,      72,      36]
+    colors = [[240,100,100], [225,218,150], [150,240,150], [240,220,150], [0,250,100], [50,220,50], [100,100,240], [200,200,250]]
+    callbacks = [
+      self.__sos_button__, 
+      self.__sol_button__, 
+      self.__found_button__,  
+      self.__needs_button__, 
+      self.__saved_button, 
+      self.__roger_button__, 
+      self.__intent_button__, 
+      self.__command_button__
+    ]
+    w=0
+    self.buttons = []
+    for i in range(len(names)):
+      bt = Button(callbacks[i], 5+w,self.map_pixel_height+5,names[i],self.my_font,widths[i],self.my_font.get_height()+8,colors[i])
+      self.buttons.append(bt)
+      w += widths[i]+5
+
+    self.dir_buttons = []
+    im = pygame.image.load(f"Dir_{i}.png")
+    scale = im.get_width()
+    #          up     upright right    r_down   down     l_down left
+    xyoffs = [[scale ,0], [scale*2,0], [scale*2,scale], [scale*2,scale*2], [scale,scale*2], [0,scale*2],[0,scale],[0,0]]
+    bx = (self.map_pixel_width + self.w_pad - scale *3)/2
+    by = (self.map_pixel_height + self.h_pad - scale *3)/2
+    for i in range(8):
+      im = pygame.image.load(f"Dir_{i}.png")
+      print(im)
+      self.dir_buttons.append(
+        Button(
+          self.__on_click_return_num__,
+          bx+xyoffs[i][0], 
+          by+xyoffs[i][1],
+          "",
+          self.my_font, 
+          scale,
+          scale,
+          [50,50,200],
+          hover_color=[20,20,150],
+          image=im,args=i)
+        )
 
   def __set_max_entities__(self, agent_names, poi_names, max_agents, max_poi, max_sol):
     self.max_agents = len(agent_names)
@@ -43,13 +293,22 @@ class sar_env():
 
   def __setup_screen__(self, tile_map, display):
     self.text_box_height = 124
+    self.button_height = 48
     self.tile_width = 10
     self.map_pixel_height = tile_map.shape[0]*self.tile_width
     self.map_pixel_width = tile_map.shape[1]*self.tile_width
-    self.my_font = pygame.font.SysFont('Comic Sans MS', 12)
-    pygame.font.init()
+    self.w_pad = 0
+    if self.map_pixel_width < 480:
+      self.w_pad = 480 - self.map_pixel_width
+    self.h_pad = 0
+    if self.map_pixel_height < 480:
+      self.w_pad = 480 - self.map_pixel_height
+    
+    self.my_font = pygame.font.SysFont('Signal MS', 20)
+    print(pygame.font.get_default_font())
+    #pygame.font.init()
     self.display = display
-    self.screen = pygame.display.set_mode([tile_map.shape[1]*10, tile_map.shape[0]*10+self.text_box_height])
+    self.screen = pygame.display.set_mode([self.map_pixel_width+self.w_pad, self.map_pixel_height+self.text_box_height + self.button_height+self.h_pad])
     self.tile_map = tile_map
     
   def __load_agents_tiles__(self, level_name):
@@ -70,6 +329,7 @@ class sar_env():
                level_name="Island", 
                agent_names=["Human","RoboDog","Drone"], 
                poi_names=["Child","Child","Adult"], 
+               player = -1,
                seed=0):
     """
     Args:
@@ -92,9 +352,11 @@ class sar_env():
       seed: random seed used for spawning Agents and POI
     """
     random.seed(seed)
+    self.player = player
     self.__set_max_entities__(agent_names, poi_names, max_agents, max_poi, max_sol)
     self.__load_agents_tiles__(level_name)
     self.__setup_screen__(tile_map, display)
+    self.__make_buttons__()
     self.player_input = {'W': False, 'A': False, 'S':False, 'D': False}
     self.reset()
 
@@ -154,7 +416,7 @@ class sar_env():
 
   def reset(self):
     self.__reset_state_constants__()
-    self.draw_surface = pygame.Surface((self.map_pixel_width,self.map_pixel_height+self.text_box_height),pygame.SRCALPHA)
+    self.draw_surface = pygame.Surface((self.map_pixel_width,self.map_pixel_height+self.text_box_height+self.button_height),pygame.SRCALPHA)
     self.active_objects = []
     self.objects = []
     self.agents = []
@@ -173,15 +435,37 @@ class sar_env():
         self.handle_key_press(event)
         self.handle_mouse_event(event)
 
+  def chatter(self):
+    if random.random() < 0.1:
+      a = self.agents[random.randint(0,len(self.agents)-1)]
+      msg = Message(
+        self,
+        a.name,
+        random.randint(0,6),
+        a.pos[0],
+        a.pos[1],
+        a.cur_action[0],
+        a.cur_action[1],
+        a.a_type,
+        "vpg",
+        random.randint(0,len(self.agents)-1),
+        random.randint(0,len(self.pois)-1)
+      )
+      msg.__send__()
+
   def step(self, actions, messages=None):
     self.actions = actions
     self.next_message = messages 
     self.__look_for_key_press__()
     self.game_logic(0.01)
     #print(f"rewards in step: {self.rewards}")
-    state = self.make_state()
+    state = self.__make_state__()
     if self.display:
-      self.draw_from_pov(self.agents[0], state)
+      self.chatter()
+      if self.player != -1:
+        self.draw_from_pov(self.agents[self.player], state)
+      else:
+        self.draw_game()
     self.terminated = self.finished()
     return state, self.rewards, self.terminated, self.truncated, self
   
@@ -203,24 +487,24 @@ class sar_env():
   def __get_viewable_objects__(self, a):
     return {"a_state": a.a_state, "s_state": a.s_state, "p_state":a.p_state}
   
-  def get_dynamic_map(self,a):
+  def __get_dynamic_map__(self,a):
     return np.zeros((int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))
 
-  def make_state(self):
+  def __make_state__(self):
     map_state = np.zeros((len(self.agents),int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1),2))
     object_state = []
     memory=[]
     for i,a in enumerate(self.agents):
       tiles, agent_memory = self.__get_viewable_tiles__(a)
       map_state[i, :, :, 0] = tiles
-      map_state[i,:,:,1] = self.get_dynamic_map(a)
+      map_state[i,:,:,1] = self.__get_dynamic_map__(a)
       object_state.append(self.__get_viewable_objects__(a))
       memory.append(agent_memory)
     return {"view":map_state,"object_state":np.array(object_state), "memory":np.array(memory)}
   
   def start(self):
     self.reset()
-    return self.make_state(), self
+    return self.__make_state__(), self
 
   def leave_tracks(self, a):
     sol = sign_of_life("Track",pygame,a.pos,[200,150,120],self.cur_sol%self.max_sol,0.1) 
@@ -279,6 +563,14 @@ class sar_env():
       self.rewards += self.final_rewards
       #self.reset()
 
+  def __draw_buttons__(self):
+    for b in self.buttons:
+      b.render(self.draw_surface)
+
+  def __draw_messages__(self):
+    msg = Message(self, "Human1",random.randint(0,7),100,100,0,0,"Human",to=1,poi_id=1)
+    msg.render(self.my_font,self.draw_surface, self)
+
   def draw_game(self):
     self.screen.fill((0,0,0,255))
     self.draw_surface.fill((0,0,0,0))
@@ -297,13 +589,15 @@ class sar_env():
           i.debug_render(color = i.color, screen = self.draw_surface)
       #pygame.draw.circle(screen, (0, 0, 255), (self.x, self.y), 75)
     #self.draw_surface.fill((255,255,255,100),special_flags=pygame.BLEND_RGBA_MULT)
+    self.__draw_buttons__()
+    self.__draw_messages__()
     self.screen.blit(self.draw_surface, (0,0))
     # Flip the display
     if self.display:
       pygame.display.flip()
   
   def draw_from_pov(self, a, state): # a is agent
-    self.screen.fill((0,0,0,255))
+    self.screen.fill((0,0,0,0))
     self.draw_surface.fill((0,0,0,0))
     # Fill the background with white
     if self.display:
@@ -328,13 +622,21 @@ class sar_env():
       #print()
       #pygame.draw.circle(screen, (0, 0, 255), (self.x, self.y), 75)
     #self.draw_surface.fill((255,255,255,100),special_flags=pygame.BLEND_RGBA_MULT)
+    self.__draw_buttons__()
+    self.__draw_messages__()
     self.screen.blit(self.draw_surface, (0,0))
     # Flip the display
     if self.display:
       pygame.display.flip()
 
   def handle_mouse_event(self, event):
+    if event.type == pygame.MOUSEMOTION:
+      for b in self.buttons:
+        b.handle_move(pygame.mouse.get_pos())
     if event.type == pygame.MOUSEBUTTONDOWN and not self.clicked:
+      for b in self.buttons:
+        b.handle_press(pygame.mouse.get_pos())
+
       self.mouse_pos = pygame.mouse.get_pos()
       self.clicked = True
     elif event.type == pygame.MOUSEBUTTONUP:
@@ -383,7 +685,7 @@ if __name__ == "__main__":
   agents = ["Human","RoboDog","Drone"]
   pois = ["Child", "Child", "Adult"]
   premade_map = np.load("../LevelGen/Island/Map.npy")
-  game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois)
+  game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,player=1)
   state, info = game.start()
   controller = player_controller(None)
   terminated = False
