@@ -187,6 +187,8 @@ class sar_env():
       to=self.agents[agent].name,
       )
     msg.__send__()
+    self.agents[agent].commanded = 5
+    self.agents[agent].command_dir = dirs[self.bnum]
 
   def __roger_button__(self,button):
     self.__general_button__(button, 5)
