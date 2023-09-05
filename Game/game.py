@@ -189,6 +189,7 @@ class sar_env():
     msg.__send__()
     self.agents[agent].commanded = 5
     self.agents[agent].command_dir = dirs[self.bnum]
+    self.agents[agent].command_frame = self.frame_num
 
   def __roger_button__(self,button):
     self.__general_button__(button, 5)
@@ -426,6 +427,7 @@ class sar_env():
     self.actions = []
     self.signs_of_life = [None]*self.max_sol
     self.cur_sol = 0
+    self.frame_num=0
     self.__populate_agents__()
     self.__populate_poi__()
 
@@ -469,6 +471,7 @@ class sar_env():
       else:
         self.draw_game()
     self.terminated = self.finished()
+    self.frame_num+=1
     return state, self.rewards, self.terminated, self.truncated, self
   
   def __get_viewable_tiles__(self, agent):

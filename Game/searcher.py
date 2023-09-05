@@ -18,6 +18,7 @@ class searcher(entity):
     self.s_state = None
     self.commanded = 0
     self.command_dir = np.zeros(2)
+    self.command_frame = 2**31-1
     
     self.view_range = agent_blueprint["view_range"]
     self.speed = float(agent_blueprint["speed"])
@@ -42,7 +43,7 @@ class searcher(entity):
       self.visibilities[k] = agent_blueprint["visibilities"][k]
 
   def __handle_action__(self, game_instance):
-    if self.commanded>0:
+    if self.commanded>0 and self.command_frame > game_instance.frame_num:
       self.cur_action = self.command_dir
       self.commanded -= 1
     self.take_action(game_instance)
