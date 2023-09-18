@@ -43,12 +43,14 @@ def class_to_action(action):
     return np.array([-1,-1])
 # create environment
 import sys
-sys.path.insert(1, '../Game') # lets us import game from another folder
-from game import sar_env
+#sys.path.insert(1, '../Game') # lets us import game from another folder
+from Game import sar_env
 agents = ["Human","RoboDog","Drone"]
+max_agents = len(agents)
 pois = ["Child", "Child", "Adult"]
 premade_map = np.load("../LevelGen/Island/Map.npy")
-env = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,seed=random.randint(0,10000))
+env = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,seed=random.randint(0,10000),player=0)
+      #sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,player=0)
 state, info = env.start()
 nn_state = np.concatenate((state['view'][0].flatten(),state['object_state'][0].flatten(),state['memory'][0].flatten()))
 terminated = False
@@ -57,7 +59,7 @@ policies = {}
 optimizers = {}
 
 for a in agents:
-  policies[a] = policy_net(nn_state.shape[0], 32, 9)
+  policies[a] = policy_net(nn_state.shape[0], 64, 9)
   try:
     pa = torch.load(f"./nets/{a}")
     print(pa())
@@ -106,7 +108,9 @@ while True:
     # use that action in the environment
     env_actions = []
     for act in np.array(np_actions):
-      env_actions.append(class_to_action(act))
+      clact = np.zeros(14+max_agents)
+      clact[0,2] = class_to_action(act)
+      env_actions.append()
     new_state, reward, done, _, info = env.step(env_actions)
     new_nn_state=[]
     for i,a in enumerate(agents):

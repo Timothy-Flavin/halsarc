@@ -34,6 +34,7 @@ class Button():
     self.text_color = text_color
     self.text_height = font.get_height()
     self.image = image
+    self.enabled = False
     if hover_color is None:
       self.hover_color=[]
       for i in range(len(self.color)):
@@ -50,9 +51,12 @@ class Button():
       self.h = h
     self.text = text
 
-  def render(self, screen):
+  def render(self, screen, enabled):
+    self.enabled = enabled
     trect = pygame.Rect(self.x,self.y,self.w,self.h)
-    if self.hovered:
+    if not self.enabled:
+      pygame.draw.rect(screen, [150,150,150], trect)
+    elif self.hovered:
       pygame.draw.rect(screen, self.hover_color, trect)
     else:
       pygame.draw.rect(screen, self.color, trect)
@@ -70,6 +74,8 @@ class Button():
       self.hovered = False
 
   def handle_press(self, mouse_pos):
+    if not self.enabled:
+      return
     if mouse_pos[0] > self.x and mouse_pos[1] > self.y and mouse_pos[0]<self.x+self.w and mouse_pos[1] < self.y+self.h:
       if self.args is None:
         self.callback(self)
@@ -158,7 +164,7 @@ class sar_env():
             b.handle_press(pygame.mouse.get_pos())
       self.__draw_ui_window__()
       for b in self.dir_buttons:
-        b.render(self.screen)
+        b.render(self.screen,True)
       if self.bnum>-1:
         selected=True
       pygame.display.flip()
@@ -174,6 +180,7 @@ class sar_env():
       np.array([-1,0]),
       np.array([-1,-1]) / s2,
     ]
+    """
     msg = Message(
       game = self, 
       name = self.agents[self.player].name,
@@ -182,14 +189,27 @@ class sar_env():
       y = int(self.agents[self.player].pos[1]),
       dx = dirs[self.bnum][0],
       dy = dirs[self.bnum][1],
-      agent_type=self.agents[self.player].a_type,
+      agent_type=self.agents[self.player].48,
       brain_type="Human",
       to=self.agents[agent].name,
       )
     msg.__send__()
-    self.agents[agent].commanded = 5
-    self.agents[agent].command_dir = dirs[self.bnum]
-    self.agents[agent].command_frame = self.frame_num
+    """
+    self.actions[self.player]
+    self.actions[self.player,2]=1.0
+    self.actions[self.player,3]= dirs[self.bnum][0]
+    self.actions[self.player,4]= dirs[self.bnum][1]
+    self.actions[self.player,5]=5
+    mt = np.zeros(8)
+    mt[7]=1
+    self.actions[self.player,6:14] = mt
+    al = np.zeros(len(self.agents))
+    al[agent]=1
+    self.actions[self.player,14:] = al
+    if self.agents[agent].commanded <=0:
+      self.agents[agent].commanded = 5
+      self.agents[agent].command_dir = dirs[self.bnum]
+      self.agents[agent].command_frame = self.frame_num
 
   def __roger_button__(self,button):
     self.__general_button__(button, 5)
@@ -208,31 +228,31 @@ class sar_env():
     self.__general_button__(button, 4,0)
   
   def __intent_button__(self, button):
-    msg = Message(
-      self,
-      self.agents[self.player].name,
-      6,
-      self.agents[self.player].pos[0],
-      self.agents[self.player].pos[1],
-      self.agents[self.player].cur_action[0],
-      self.agents[self.player].cur_action[1],
-      agent_type=self.agents[self.player].a_type,
-      brain_type="Human"
-    )
-    msg.__send__()
+    self.actions[self.player]
+    self.actions[self.player,2]=1.0
+    self.actions[self.player,3]=self.agents[self.player].cur_action[0]
+    self.actions[self.player,4]=self.agents[self.player].cur_action[1]
+    self.actions[self.player,5]=5
+    mt = np.zeros(8)
+    mt[6]=1
+    self.actions[self.player,6:14] = mt
+    self.actions[self.player,14:] = -1
+
+    for i,a in enumerate(self.agents):
+      if True: # if a can use radio TODO
+        a.a_state[a.__i_adjust__(i),2] = self.agents[self.player].cur_action[0]
+        a.a_state[a.__i_adjust__(i),3] = self.agents[self.player].cur_action[1]
 
   def __general_button__(self,button,msg_type, poi=-1):
-    msg = Message(
-      self,
-      self.agents[self.player].name,
-      msg_type,
-      self.agents[self.player].pos[0],
-      self.agents[self.player].pos[1],
-      agent_type=self.agents[self.player].a_type,
-      brain_type="Human",
-      poi_id=poi
-    )
-    msg.__send__()
+    self.actions[self.player]
+    self.actions[self.player,2]=1.0
+    self.actions[self.player,3]=0
+    self.actions[self.player,4]=0
+    self.actions[self.player,5]=0
+    mt = np.zeros(8)
+    mt[msg_type]=1
+    self.actions[self.player,6:14] = mt
+    self.actions[self.player,14:] = -1
 
   def __make_buttons__(self):
     names = ["SOS","Sol","Found POI","Help POI", "Saved", "Roger", "Going", "Go"]
@@ -264,7 +284,7 @@ class sar_env():
     by = (self.map_pixel_height + self.h_pad - scale *3)/2
     for i in range(8):
       im = pygame.image.load(f"Dir_{i}.png")
-      print(im)
+      #print(im)
       self.dir_buttons.append(
         Button(
           self.__on_click_return_num__,
@@ -356,6 +376,7 @@ class sar_env():
     """
     random.seed(seed)
     self.player = player
+    self.radio = {"1":1}
     self.__set_max_entities__(agent_names, poi_names, max_agents, max_poi, max_sol)
     self.__load_agents_tiles__(level_name)
     self.__setup_screen__(tile_map, display)
@@ -382,6 +403,7 @@ class sar_env():
         max_alt = t["altitude"]
     agent_name_ct = {}
     self.agent_types = {}
+    self.agent_type_names = list(self.agent_blueprint.keys())
     self.num_agent_types = len(self.agent_blueprint.keys())
     for i,nm in enumerate(self.agent_blueprint.keys()):
       self.agent_types[nm] = i
@@ -391,7 +413,7 @@ class sar_env():
       agent = self.agent_blueprint[agent_name]
       self.agents.append(searcher(agent, i, agent_name, agent_name_ct[agent_name], self.agent_types[agent_name], pygame)) 
       self.agents[-1].memory = np.zeros((self.tile_map.shape[0], self.tile_map.shape[1]))
-      self.agents[-1].a_state = np.zeros((self.max_agents,4+self.num_agent_types)) # x,y,alive,recency,[atype] one hot coded
+      self.agents[-1].a_state = np.zeros((self.max_agents,6+self.num_agent_types)) # x,y,dx,dy,alive,recency,[atype] one hot coded
       self.agents[-1].p_state = np.zeros((self.max_poi,6)) # x,y,destroyed,saved,age,recency
       self.agents[-1].s_state = np.zeros((self.max_sol,4)) # x,y,age,recency
       self.add_entity(self.agents[-1])
@@ -439,33 +461,91 @@ class sar_env():
         self.handle_key_press(event)
         self.handle_mouse_event(event)
 
-  def chatter(self):
-    if random.random() < 0.1:
-      a = self.agents[random.randint(0,len(self.agents)-1)]
+  def __chatter__(self, messages):
+    rng = np.arange(0,len(self.agents),1)
+    np.random.shuffle(rng)
+    sent = False
+    for mi,m in enumerate(rng):
+      #print(messages[m,2]) 
+      if messages[m,2] < 0.5:
+        self.agents[mi].message_state = np.array([0,0,1])
+        continue
+      elif sent:
+        self.agents[mi].message_state = np.array([0,1,0])
+        continue
+      self.agents[mi].message_state = np.array([1,0,0])
+      mtp = np.argmax(messages[m,6:14])
+      act = messages[m,3:5]
+      a = self.agents[m]
       msg = Message(
         self,
-        a.name,
-        random.randint(0,6),
+        self.agents[mi].name,
+        mtp,
         a.pos[0],
         a.pos[1],
-        a.cur_action[0],
-        a.cur_action[1],
-        a.a_type,
-        "vpg",
-        random.randint(0,len(self.agents)-1),
-        random.randint(0,len(self.pois)-1)
+        act[0],
+        act[1],
+        a.a_num,
+        a.brain_name,
+        self.agents[np.argmax(messages[m,14:])].name,
+        a.poi,
+        messages[m,5]
       )
       msg.__send__()
+      if mtp <6: # this makes it so messages can only be sent the once
+        print("sent so illegal")
+        a.legal_messages[mtp]=0
+        if mtp == 2 or mtp == 3:
+          a.poi = -1
+      if mtp == 7:
+        self.agents[np.argmax(messages[m,14:])].legal_messages[5]=1
 
-  def step(self, actions, messages=None):
+      for i,ag in enumerate(self.agents):
+        if True: #Can use radio TODO
+          ag.a_state[ag.__i_adjust__(i),0] = a.pos[0]
+          ag.a_state[ag.__i_adjust__(i),1] = a.pos[1]
+          ag.a_state[ag.__i_adjust__(i),2] = 0
+          ag.a_state[ag.__i_adjust__(i),3] = 0
+          if mtp == 6:
+            ag.a_state[ag.__i_adjust__(i),2] = act[0]
+            ag.a_state[ag.__i_adjust__(i),3] = act[1]
+      atp = np.zeros(self.num_agent_types)
+      atp[a.a_type] = 1
+      target = np.zeros(self.max_agents)
+      target[a.a_num] = 1
+      self.radio = {
+        "message": 
+        np.concatenate(
+          (
+            np.array([
+            a.pos[0],
+            a.pos[1],
+            act[0], 
+            act[1],
+            messages[m,5]
+            ]), 
+            messages[m,6:14],
+            target,
+            atp
+          )
+        ),
+        "sender":[
+          np.zeros(self.max_agents),
+          np.zeros(len(self.agent_types)),
+          self.agents[mi].brain_name
+        ],
+        "queue_status":[],
+        "message_legality":[]
+      } 
+    
+  def step(self, actions):
     self.actions = actions
-    self.next_message = messages 
     self.__look_for_key_press__()
-    self.game_logic(0.01)
+    self.__game_logic__(0.01)
     #print(f"rewards in step: {self.rewards}")
+    self.__chatter__(actions)
     state = self.__make_state__()
     if self.display:
-      self.chatter()
       if self.player != -1:
         self.draw_from_pov(self.agents[self.player], state)
       else:
@@ -478,15 +558,17 @@ class sar_env():
     pos = agent.pos
     row, col, tile = agent.get_tile_from_pos(self)
     tile_pos = [row,col]
+    mem=np.sum(agent.memory)
     viewable = np.zeros((int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))-1
     for r in range(tile_pos[0]-self.max_agent_view_dist, tile_pos[0]+self.max_agent_view_dist+1):
       for c in range(tile_pos[1]-self.max_agent_view_dist, tile_pos[1]+self.max_agent_view_dist+1):
         # Checks if tile is within view range and if it is in the map
-        if (((r-tile_pos[0])*self.tile_width)**2 + ((c-tile_pos[1])*self.tile_width)**2 <= agent.effective_view_range**2 
+        if not agent.destroyed and (((r-tile_pos[0])*self.tile_width)**2 + ((c-tile_pos[1])*self.tile_width)**2 <= agent.effective_view_range**2 
         and r>=0 and r<self.tile_map.shape[0] and c>=0 and c<self.tile_map.shape[1]):
           viewable[r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tile_map[r,c]
           agent.memory[r,c]=1
     agent.memory*=0.99
+    self.rewards[agent.a_num] += (np.sum(agent.memory)-mem) / self.max_agent_view_dist / self.max_agent_view_dist
     return viewable, agent.memory
   
   def __get_viewable_objects__(self, a):
@@ -496,17 +578,26 @@ class sar_env():
     return np.zeros((int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))
 
   def __make_state__(self):
-    map_state = np.zeros((len(self.agents),int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1),2))
+    map_state = np.zeros((len(self.agents),int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))#single channel no fire
     object_state = []
-    memory=[]
+    self.radio['queue_state'] = []
+    self.radio['message_legality'] = []
+    memory=np.zeros((len(self.agents),self.tile_map.shape[0],self.tile_map.shape[1],2))
     for i,a in enumerate(self.agents):
       tiles, agent_memory = self.__get_viewable_tiles__(a)
-      map_state[i, :, :, 0] = tiles
-      map_state[i,:,:,1] = self.__get_dynamic_map__(a)
+      map_state[i, :, :] = tiles
+      #map_state[i,:,:,1] = self.__get_dynamic_map__(a)
       object_state.append(self.__get_viewable_objects__(a))
-      memory.append(agent_memory)
-    return {"view":map_state,"object_state":np.array(object_state), "memory":np.array(memory)}
+      memory[i,:,:,0]=agent_memory
+      memory[i,:,:,1]=self.tile_map
+      self.radio['queue_state'].append(a.message_state)
+      self.radio['message_legality'].append(a.legal_messages)
+
+    return {"view":map_state,"object_state":np.array(object_state),"memory":np.array(memory),"radio":self.radio}
   
+  def __flatten_state__(self, state):
+    print("Not implemented")
+
   def start(self):
     self.reset()
     return self.__make_state__(), self
@@ -518,7 +609,7 @@ class sar_env():
     self.cur_sol += 1
     
   def leave_clothes(self, a):
-    print("pop")
+    #print("pop")
     sol = sign_of_life("Clothes",pygame,a.pos,[200,150,120],self.cur_sol%self.max_sol,0.1) 
     #self.add_entity(sol)
     self.signs_of_life[self.cur_sol%self.max_sol] = sol
@@ -551,13 +642,12 @@ class sar_env():
         return i
     return None
 
-  def game_logic(self, delta_time):
-    #print("Set rewards to slight negative")
+  def __game_logic__(self, delta_time):
     self.rewards=np.zeros(self.num_agents)
     for i,agent in enumerate(self.agents):
       if not agent.destroyed:
         self.rewards[i] -= 0.01
-      agent.cur_action = self.actions[i]
+      agent.cur_action = self.actions[i,0:2]
     for i in self.active_objects:
       if i.destroyed:
         self.active_objects.remove(i)
@@ -568,9 +658,10 @@ class sar_env():
       self.rewards += self.final_rewards
       #self.reset()
 
-  def __draw_buttons__(self):
-    for b in self.buttons:
-      b.render(self.draw_surface)
+  def __draw_buttons__(self, a):
+    #print(f"button {a.legal_messages}, {a.name}")
+    for i,b in enumerate(self.buttons):
+      b.render(self.draw_surface, a.legal_messages[i]>0)
 
   def __draw_messages__(self):
     msg = Message(self, "Human1",random.randint(0,7),100,100,0,0,"Human",to=1,poi_id=1)
@@ -614,7 +705,7 @@ class sar_env():
           pygame.draw.rect(self.screen, np.array(self.tiles[self.tile_map[r,c]]["color"])*(a.memory[r,c]*0.8+0.2), trect)
     # Draw agents and poi
       for i in self.active_objects:
-        i.render(color = i.color, screen = self.screen,pov=a)
+        i.render(color = i.color, screen = self.screen, pov=a)
         if self.debug_render:
           i.debug_render(color = i.color, screen = self.draw_surface)
       #print("Updated")
@@ -627,7 +718,7 @@ class sar_env():
       #print()
       #pygame.draw.circle(screen, (0, 0, 255), (self.x, self.y), 75)
     #self.draw_surface.fill((255,255,255,100),special_flags=pygame.BLEND_RGBA_MULT)
-    self.__draw_buttons__()
+    self.__draw_buttons__(a)
     self.__draw_messages__()
     self.screen.blit(self.draw_surface, (0,0))
     # Flip the display
@@ -678,9 +769,10 @@ class sar_env():
 
   def found(self, obj, agent):
     reward = 0
-    reward += obj.found_reward
+    if obj.hidden:
+      reward += obj.found_reward
     if obj.entity_type=="person_of_interest":
-      if agent.a_type in obj.save_by:
+      if self.agent_type_names[agent.a_num] in obj.save_by:
         reward += obj.saved_reward
         obj.saved = True
     self.rewards[agent.id]+=reward
@@ -690,16 +782,16 @@ if __name__ == "__main__":
   agents = ["Human","RoboDog","Drone"]
   pois = ["Child", "Child", "Adult"]
   premade_map = np.load("../LevelGen/Island/Map.npy")
-  game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,player=1)
+  game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,player=0)
   state, info = game.start()
   controller = player_controller(None)
   terminated = False
 
   while not terminated:
-    actions = np.zeros((len(agents),2))
-    messages = np.zeros((len(agents),2))
+    actions = np.zeros((len(agents),14+len(agents)))
     for i,a in enumerate(agents):
-      actions[i] = controller.choose_action(state=state, game_instance=game)
-    state, rewards, terminated, truncated, info = game.step(actions=actions, messages=messages)
+      actions[i,0:2] = controller.choose_action(state=state, game_instance=game)
+      actions[i,2:] = np.zeros(12+len(agents))
+    state, rewards, terminated, truncated, info = game.step(actions=actions)
     game.wait(100)
   

@@ -7,7 +7,7 @@ class sign_of_life(entity):
   def __init__(self, name, game, pos, color, s_num, reward=0.2):
     entity.__init__(self, game, np.array(pos,dtype=np.float32), 0, 3, entity_type="sign_of_life")
     self.name = name
-    self.hidden = False
+    self.hidden = True
     self.s_num = s_num
     #self.seen_by = np.zeros(max_agents, dtype=np.float16)
     self.time_active = 0

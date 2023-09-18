@@ -4,7 +4,7 @@ class Message():
   messages = None
   cur_message=-1
 
-  def __init__(self, game, name, m_type:int=0, x:float=0, y:float=0, dx:float=0,dy:float=0,agent_type="Human",brain_type="vpg", to=-1, poi_id=-1):
+  def __init__(self, game, name, m_type:int=0, x:float=0, y:float=0, dx:float=0,dy:float=0,agent_type="Human",brain_type="vpg", to=-1, poi_id=-1, magnitude=5):
     # message encoding: [int message_type, float x, float y, float dx, float dy]
     self.game_instance = game
     self.x = x
@@ -17,9 +17,11 @@ class Message():
     self.brain_type = brain_type
     self.to = to #agent id
     self.poi_id = poi_id
+    self.magnitude = magnitude
     self.hr_message = self.to_string()
     self.mr_message = self.to_ai()
     self.n_lines = 124//game.my_font.get_height()
+    
     if Message.messages is None:
       Message.messages = [""]*self.n_lines
     
@@ -59,10 +61,10 @@ class Message():
       f" Needs a {self.game_instance.pois[self.poi_id].save_by} to be saved",
       f" Target Saved: {self.game_instance.pois[self.poi_id].name}",
       f" Roger",
-      f" I want to go {self.dir_to_cardinal(self.dx,self.dy)} <{self.dx:.2f} {self.dy:.2f}>",
-      f" {self.to} Should go {self.dir_to_cardinal(self.dx,self.dy)} <{self.dx:.2f},{self.dy:.2f}>"
+      f" I want to go {self.magnitude} {self.dir_to_cardinal(self.dx,self.dy)} <{self.dx:.2f} {self.dy:.2f}>",
+      f" {self.to} Should go {self.magnitude} {self.dir_to_cardinal(self.dx,self.dy)} <{self.dx:.2f},{self.dy:.2f}>"
     ]
-    return f"{self.name}({self.brain_type}) [{int(self.x)}, {int(self.y)}]:"+encodings[self.m_type]
+    return f"{self.name} ({self.brain_type}) [{int(self.x)}, {int(self.y)}]: "+encodings[self.m_type]
   
   def render(self, font, screen, game):
     n=0
