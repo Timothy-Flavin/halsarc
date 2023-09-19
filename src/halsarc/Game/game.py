@@ -276,14 +276,16 @@ class sar_env():
       w += widths[i]+5
 
     self.dir_buttons = []
-    im = pygame.image.load(f"Dir_{i}.png")
+    print("which file are my images in?")
+    print(__file__)
+    im = pygame.image.load(__file__+f"/Dir_{i}.png")
     scale = im.get_width()
     #          up     upright right    r_down   down     l_down left
     xyoffs = [[scale ,0], [scale*2,0], [scale*2,scale], [scale*2,scale*2], [scale,scale*2], [0,scale*2],[0,scale],[0,0]]
     bx = (self.map_pixel_width + self.w_pad - scale *3)/2
     by = (self.map_pixel_height + self.h_pad - scale *3)/2
     for i in range(8):
-      im = pygame.image.load(f"Dir_{i}.png")
+      im = pygame.image.load(f"Dir_{i}")
       #print(im)
       self.dir_buttons.append(
         Button(
@@ -334,10 +336,10 @@ class sar_env():
     self.screen = pygame.display.set_mode([self.map_pixel_width+self.w_pad, self.map_pixel_height+self.text_box_height + self.button_height+self.h_pad])
     self.tile_map = tile_map
     
-  def __load_agents_tiles__(self, level_name):
-    agent_blueprint_url=f"../LevelGen/{level_name}/Agents.json"
-    tiles_url=f"../LevelGen/{level_name}/Tiles.json"
-    hidden_url=f"../LevelGen/{level_name}/POI.json"
+  def __load_agents_tiles__(self, level_dir, level_name):
+    agent_blueprint_url=f"../{level_dir}/{level_name}/Agents.json"
+    tiles_url=f"../{level_dir}/{level_name}/Tiles.json"
+    hidden_url=f"../{level_dir}/{level_name}/POI.json"
     self.agent_blueprint = json.load(open(agent_blueprint_url))
     self.hidden_blueprint = json.load(open(hidden_url))
     self.tiles = json.load(open(tiles_url))
@@ -349,6 +351,7 @@ class sar_env():
                max_sol=10, 
                vectorize_state=True, 
                display=False, 
+               level_dir="LevelGen",
                level_name="Island", 
                agent_names=["Human","RoboDog","Drone"], 
                poi_names=["Child","Child","Adult"], 
@@ -378,7 +381,7 @@ class sar_env():
     self.player = player
     self.radio = {"1":1}
     self.__set_max_entities__(agent_names, poi_names, max_agents, max_poi, max_sol)
-    self.__load_agents_tiles__(level_name)
+    self.__load_agents_tiles__(level_dir, level_name)
     self.__setup_screen__(tile_map, display)
     self.__make_buttons__()
     self.player_input = {'W': False, 'A': False, 'S':False, 'D': False}
@@ -778,20 +781,5 @@ class sar_env():
     self.rewards[agent.id]+=reward
     self.final_rewards+=reward/self.num_agents
   
-if __name__ == "__main__":
-  agents = ["Human","RoboDog","Drone"]
-  pois = ["Child", "Child", "Adult"]
-  premade_map = np.load("../LevelGen/Island/Map.npy")
-  game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,player=0)
-  state, info = game.start()
-  controller = player_controller(None)
-  terminated = False
 
-  while not terminated:
-    actions = np.zeros((len(agents),14+len(agents)))
-    for i,a in enumerate(agents):
-      actions[i,0:2] = controller.choose_action(state=state, game_instance=game)
-      actions[i,2:] = np.zeros(12+len(agents))
-    state, rewards, terminated, truncated, info = game.step(actions=actions)
-    game.wait(100)
   
