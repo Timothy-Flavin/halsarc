@@ -1,4 +1,4 @@
-# Department-Training
+# HALC-SAR Heterogeneous Agents Learning Communication for Search and Rescue
 A group of agents is called a department and this repo is a MARL experiment using pygame to train some agents
 
 ## Level Gen
