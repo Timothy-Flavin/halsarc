@@ -1,5 +1,6 @@
 #import sys
 import math
+import os
 #sys.path.append('../Environment')
 
 # Simple pygame program
@@ -8,19 +9,18 @@ import pygame
 pygame.init()
 
 import time
-from player import player
-from entity import entity
+from halsarc.Game.player import player
+from halsarc.Game.entity import entity
 import numpy as np
 import random
 import json
-from controllers import *
+from halsarc.Game.controllers import *
 # Set up the drawing window
 
-from searcher import searcher
-from poi import person_of_interest
-from sol import sign_of_life
-from message import Message
-import queue
+from halsarc.Game.searcher import searcher
+from halsarc.Game.poi import person_of_interest
+from halsarc.Game.sol import sign_of_life
+from halsarc.Game.message import Message
 
 class Button():
   def __init__(self, callback, x, y, text, font, w=None, h=None, color=[200,200,250], text_color=[255,255,255], hover_color=None, image=None, args=None):
@@ -278,14 +278,15 @@ class sar_env():
     self.dir_buttons = []
     print("which file are my images in?")
     print(__file__)
-    im = pygame.image.load(__file__+f"/Dir_{i}.png")
+    print(os.path.dirname(__file__))
+    im = pygame.image.load(os.path.dirname(__file__)+f"/Dir_{0}.png")
     scale = im.get_width()
     #          up     upright right    r_down   down     l_down left
     xyoffs = [[scale ,0], [scale*2,0], [scale*2,scale], [scale*2,scale*2], [scale,scale*2], [0,scale*2],[0,scale],[0,0]]
     bx = (self.map_pixel_width + self.w_pad - scale *3)/2
     by = (self.map_pixel_height + self.h_pad - scale *3)/2
     for i in range(8):
-      im = pygame.image.load(f"Dir_{i}")
+      im = pygame.image.load(os.path.dirname(__file__)+f"\\Dir_{i}.png")
       #print(im)
       self.dir_buttons.append(
         Button(
@@ -356,6 +357,7 @@ class sar_env():
                agent_names=["Human","RoboDog","Drone"], 
                poi_names=["Child","Child","Adult"], 
                player = -1,
+               explore_multiplier=0.1,
                seed=0):
     """
     Args:
@@ -379,6 +381,7 @@ class sar_env():
     """
     random.seed(seed)
     self.player = player
+    self.explore_multiplier = explore_multiplier
     self.radio = {"1":1}
     self.__set_max_entities__(agent_names, poi_names, max_agents, max_poi, max_sol)
     self.__load_agents_tiles__(level_dir, level_name)
@@ -388,6 +391,7 @@ class sar_env():
     self.reset()
 
   def __reset_state_constants__(self):
+    self.rewards = np.zeros(self.max_agents)
     self.current_agent = 0
     self.current_step = 0
     self.running = True
@@ -571,7 +575,7 @@ class sar_env():
           viewable[r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tile_map[r,c]
           agent.memory[r,c]=1
     agent.memory*=0.99
-    self.rewards[agent.a_num] += (np.sum(agent.memory)-mem) / self.max_agent_view_dist / self.max_agent_view_dist
+    self.rewards[agent.a_num] += (np.sum(agent.memory)-mem) / self.max_agent_view_dist / self.max_agent_view_dist * self.explore_multiplier
     return viewable, agent.memory
   
   def __get_viewable_objects__(self, a):
@@ -782,4 +786,21 @@ class sar_env():
     self.final_rewards+=reward/self.num_agents
   
 
-  
+
+if __name__ == "__main__":
+  agents = ["Human","RoboDog","Drone"]
+  pois = ["Child", "Child", "Adult"]
+  premade_map = np.load("../LevelGen/Island/Map.npy")
+  game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,player=0)
+  state, info = game.start()
+  controller = player_controller(None)
+  terminated = False
+
+  while not terminated:
+    actions = np.zeros((len(agents),14+len(agents)))
+    for i,a in enumerate(agents):
+      actions[i,0:2] = controller.choose_action(state=state, game_instance=game)
+      actions[i,2:] = np.zeros(12+len(agents))
+    state, rewards, terminated, truncated, info = game.step(actions=actions)
+    print(rewards[0])
+    game.wait(100)

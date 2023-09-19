@@ -1,5 +1,5 @@
 import numpy as np
-from entity import entity
+from halsarc.Game.entity import entity
 import random
 
 class sign_of_life(entity):

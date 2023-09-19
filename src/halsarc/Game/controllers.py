@@ -1,6 +1,5 @@
 import numpy as np
 import random
-import projectile
 
 class player_controller():
   def __init__(self, parent):

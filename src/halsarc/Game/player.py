@@ -1,7 +1,7 @@
 import numpy as np
 import random
-from entity import entity
-from projectile import projectile
+from halsarc.Game.entity import entity
+from halsarc.Game.projectile import projectile
 
 class player(entity):
   def __init__(self, team, game, pos = np.array([0,0]), speed=10, size=20, entity_type="combatant"):

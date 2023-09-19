@@ -1,5 +1,5 @@
 import numpy as np
-from game import sar_env
+from halsarc.Game.game import sar_env
 import pickle
 import os
 

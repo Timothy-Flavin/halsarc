@@ -1,6 +1,6 @@
 import numpy as np
-from entity import entity
-from controllers import player_controller
+from halsarc.Game.entity import entity
+from halsarc.Game.controllers import player_controller
 import math
 import random
 

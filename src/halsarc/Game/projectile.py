@@ -1,6 +1,6 @@
 from logging import exception
 import numpy as np
-from entity import entity
+from halsarc.Game.entity import entity
 
 class projectile(entity):
   def __init__(self, team, game, pos = np.array([0,0]), speed=10, dir=np.array([0,0]), damage=10, entity_type="projectile"):
