@@ -1,3 +1,5 @@
 __pycache__
 Learning
 *.npy
+*.pyxel
+\dist
