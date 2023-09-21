@@ -45,7 +45,7 @@ State:
     "sender":[
       a_num, one-hot
       a_type, one-hot
-      brain_type, int a_type + brain_type has to be a unique key
+      brain_type, brain_type + int a_type has to be a unique key
     ],
     "queue_state":[
       num_agents,

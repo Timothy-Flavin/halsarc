@@ -446,6 +446,24 @@ class sar_env():
       self.pois[-1].pos = np.array([float(random.randint(100,self.map_pixel_width-100)), float(random.randint(100,self.map_pixel_height-100))], dtype=np.float32)
       #print(f"pois : {self.pois[-1].pos}")
 
+  def __reset_radio__(self):
+    self.radio = {
+        "message": 
+        np.zeros((14+self.max_agents+len(self.agent_types))),
+        "sender":[
+          np.zeros(self.max_agents),
+          np.zeros(len(self.agent_types)),
+          self.agents[0].brain_name
+        ],
+        "queue_status":[],
+        "message_legality":[]
+      } 
+    for i,a in enumerate(self.agents):
+      self.radio['queue_status'].append([0,0,1])
+      self.radio['message_legality'].append([0,0,0,0,0,0,1,1])
+    self.radio['queue_status'] = np.array(self.radio['queue_status'])
+    self.radio['message_legality'] = np.array(self.radio['message_legality'])
+    
   def reset(self):
     self.__reset_state_constants__()
     self.draw_surface = pygame.Surface((self.map_pixel_width,self.map_pixel_height+self.text_box_height+self.button_height),pygame.SRCALPHA)
@@ -459,6 +477,7 @@ class sar_env():
     self.frame_num=0
     self.__populate_agents__()
     self.__populate_poi__()
+    self.__reset_radio__()
 
   def __look_for_key_press__(self):
     for event in pygame.event.get():
@@ -573,9 +592,10 @@ class sar_env():
         if not agent.destroyed and (((r-tile_pos[0])*self.tile_width)**2 + ((c-tile_pos[1])*self.tile_width)**2 <= agent.effective_view_range**2 
         and r>=0 and r<self.tile_map.shape[0] and c>=0 and c<self.tile_map.shape[1]):
           viewable[r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tile_map[r,c]
+          self.rewards[agent.a_num]+=(1-agent.memory[r,c])*self.explore_multiplier
           agent.memory[r,c]=1
     agent.memory*=0.99
-    self.rewards[agent.a_num] += (np.sum(agent.memory)-mem) / self.max_agent_view_dist / self.max_agent_view_dist * self.explore_multiplier
+    #self.rewards[agent.a_num] += (np.sum(agent.memory)-mem) / self.max_agent_view_dist / self.max_agent_view_dist * self.explore_multiplier
     return viewable, agent.memory
   
   def __get_viewable_objects__(self, a):
@@ -587,7 +607,7 @@ class sar_env():
   def __make_state__(self):
     map_state = np.zeros((len(self.agents),int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))#single channel no fire
     object_state = []
-    self.radio['queue_state'] = []
+    self.radio['queue_status'] = []
     self.radio['message_legality'] = []
     memory=np.zeros((len(self.agents),self.tile_map.shape[0],self.tile_map.shape[1],2))
     for i,a in enumerate(self.agents):
@@ -597,13 +617,10 @@ class sar_env():
       object_state.append(self.__get_viewable_objects__(a))
       memory[i,:,:,0]=agent_memory
       memory[i,:,:,1]=self.tile_map
-      self.radio['queue_state'].append(a.message_state)
+      self.radio['queue_status'].append(a.message_state)
       self.radio['message_legality'].append(a.legal_messages)
 
     return {"view":map_state,"object_state":np.array(object_state),"memory":np.array(memory),"radio":self.radio}
-  
-  def __flatten_state__(self, state):
-    print("Not implemented")
 
   def start(self):
     self.reset()
@@ -785,7 +802,26 @@ class sar_env():
     self.rewards[agent.id]+=reward
     self.final_rewards+=reward/self.num_agents
   
-
+  def vectorize_state(self,state,anum,radio=False):
+    a1 = state['view'][anum].flatten()
+    a2 = np.concatenate(
+          (
+            state['object_state'][anum]["a_state"].flatten(),
+            state['object_state'][anum]["s_state"].flatten(),
+            state['object_state'][anum]["p_state"].flatten(),
+          )
+        )
+    a3 = state['memory'][anum].flatten()
+    a4 = np.concatenate(
+          (
+            state['radio']["message"].flatten(),
+            state['radio']["legal_messages"][anum].flatten(),
+            state['radio']["queue_state"][anum].flatten(),
+            state['radio']['sender'][0],
+            state['radio']['sender'][1]
+          )
+        )
+    return np.concatenate((a1,a2,a3,a4))
 
 if __name__ == "__main__":
   agents = ["Human","RoboDog","Drone"]
