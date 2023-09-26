@@ -57,10 +57,11 @@ class searcher(entity):
     row, col, self.tile = self.get_tile_from_pos( game_instance)
 
   def __i_adjust__(self,i):
+    #print(f"Agent: {self.a_num}, i {i}")
     if i==self.a_num:
-      return len(self.a_state)-1
-    if i>self.a_num:
-      return i-1
+      return 0
+    if i<self.a_num:
+      return i+1
     return i
 
   def __update_memory__(self, game_instance):
@@ -75,29 +76,34 @@ class searcher(entity):
     self.effective_view_range = self.view_range*self.altitude*game_instance.tile_width
 
     # Agent memory, the last agent is always this agent
-    adjust = 0
+    adjust = 1
     for i,obj in enumerate(game_instance.agents):
-      ia = i-adjust
+      ia = i+adjust
       if i == self.a_num:
-        adjust=1
-        ia = len(game_instance.agents)-1
+        adjust=0
+        ia = 0#len(game_instance.agents)-1
       
+      #print(ia)
       self.a_state[ia,5] *= 0.99
       if np.sum(np.square(self.pos - obj.pos)) < self.effective_view_range*self.effective_view_range:
         # x,y,alive,a_type one hot coded
         #self.a_state[ia] = np.zeros(game_instance.num_agent_types+6)
-        self.a_state[ia,2] = obj.pos[0] - self.a_state[ia,0]
-        self.a_state[ia,3] = obj.pos[1] - self.a_state[ia,1]
+        self.a_state[ia,2] = 0#obj.pos[0] - self.a_state[ia,0]
+        self.a_state[ia,3] = 0#obj.pos[1] - self.a_state[ia,1]
         self.a_state[ia,0] = obj.pos[0]
         self.a_state[ia,1] = obj.pos[1]
         self.a_state[ia,4] = 1-int(obj.destroyed)
         self.a_state[ia,5] = 1.0
-        self.a_state[ia,ia+4] = 1
+        self.a_state[ia,obj.a_type+6] = 1
       else:
         self.a_state[ia,0] = self.a_state[ia,0] + self.a_state[ia,2]
         self.a_state[ia,1] = self.a_state[ia,1] + self.a_state[ia,3]
         self.a_state[ia,0] = max(min(self.a_state[ia,0], game_instance.map_pixel_width),0)
         self.a_state[ia,1] = max(min(self.a_state[ia,1], game_instance.map_pixel_height),0)
+        self.a_state[ia,4] = 1-int(obj.destroyed)
+      #print(
+      #  f"speed: {math.sqrt(self.a_state[ia,2]**2 + self.a_state[ia,3]**2)/(obj.speed*obj.speed_multiplier)} from mul: {(obj.speed*obj.speed_multiplier)}")
+    
     # Sign of life memory
     for i,sol in enumerate(game_instance.signs_of_life):
       if sol is None:
@@ -129,23 +135,29 @@ class searcher(entity):
   def update(self, delta_time, game_instance):
     self.__handle_action__(game_instance)
     self.time_active+=1
-    arr = np.array([self.pos[0],self.pos[1],0,0, 0,1.0,0,0,0])
-    arr[6+self.a_type]=1 # 6 + num agent types
-    self.a_state[-1] = arr
+    #arr = np.array([self.pos[0],self.pos[1],0,0, 0,1.0,0,0,0])
+    #arr[6+self.a_type]=1 # 6 + num agent types
+    #self.a_state[-1] = arr
     if self.time_active>self.active_time:
       self.destroy()
       return
-    self.__update_memory__(game_instance)
+    
 
   def render(self, color, screen, pov=None, debug=False):
+    #if pov is not None:
+     #print(f"agent {self.a_num} recency: {pov.a_state[pov.__i_adjust__(self.a_num),4]}")
+     #print(self.destroyed)
     if pov is None:
       self.game.draw.circle(screen, color, center=(float(self.pos[0]), float(self.pos[1])), radius=self.size)
       h = max(int(self.size/5),2)
       trect = self.game.Rect(self.pos[0]-self.size,self.pos[1]-self.size-h, int(self.size*2-self.size*2*self.time_active/self.active_time),h)
       self.game.draw.rect(screen, (0,100,250), trect)
     elif pov.a_state[pov.__i_adjust__(self.a_num),4]>0:
+      
+     #print(f"drawing {self.a_num} from pov: {pov.a_num} as {pov.__i_adjust__(self.a_num)}")
       x = float(pov.a_state[pov.__i_adjust__(self.a_num),0])
       y = float(pov.a_state[pov.__i_adjust__(self.a_num),1])
+     #print(f"{pov.a_state[pov.__i_adjust__(self.a_num),4]:.2f} pos: [{self.pos[0]:.1f},{self.pos[1]:.1f}], memory: [{x:.1f},{y:.1f}]")
       self.game.draw.circle(screen, 
                             np.array(color)*float(pov.a_state[pov.__i_adjust__(self.a_num),5]),
                             center=(x,

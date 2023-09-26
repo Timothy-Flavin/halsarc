@@ -17,7 +17,7 @@ import json
 from halsarc.Game.controllers import *
 # Set up the drawing window
 
-from halsarc.Game.searcher import searcher
+from halsarc.Game.searcher import searcher #halsarc.Game.
 from halsarc.Game.poi import person_of_interest
 from halsarc.Game.sol import sign_of_life
 from halsarc.Game.message import Message
@@ -276,9 +276,9 @@ class sar_env():
       w += widths[i]+5
 
     self.dir_buttons = []
-    print("which file are my images in?")
-    print(__file__)
-    print(os.path.dirname(__file__))
+   #print("which file are my images in?")
+   #print(__file__)
+   #print(os.path.dirname(__file__))
     im = pygame.image.load(os.path.dirname(__file__)+f"/Dir_{0}.png")
     scale = im.get_width()
     #          up     upright right    r_down   down     l_down left
@@ -491,21 +491,21 @@ class sar_env():
     rng = np.arange(0,len(self.agents),1)
     np.random.shuffle(rng)
     sent = False
-    for mi,m in enumerate(rng):
+    for m in rng:
       #print(messages[m,2]) 
       if messages[m,2] < 0.5:
-        self.agents[mi].message_state = np.array([0,0,1])
+        self.agents[m].message_state = np.array([0,0,1])
         continue
       elif sent:
-        self.agents[mi].message_state = np.array([0,1,0])
+        self.agents[m].message_state = np.array([0,1,0])
         continue
-      self.agents[mi].message_state = np.array([1,0,0])
-      mtp = np.argmax(messages[m,6:14])
-      act = messages[m,3:5]
+      self.agents[m].message_state = np.array([1,0,0])
       a = self.agents[m]
+      mtp = np.argmax(messages[m,6:14]*a.legal_messages)
+      act = messages[m,3:5]
       msg = Message(
         self,
-        self.agents[mi].name,
+        self.agents[m].name,
         mtp,
         a.pos[0],
         a.pos[1],
@@ -513,30 +513,33 @@ class sar_env():
         act[1],
         a.a_num,
         a.brain_name,
-        self.agents[np.argmax(messages[m,14:])].name,
+        self.agents[np.argmax(messages[m,14:14+len(self.agents)])].name,
         a.poi,
         messages[m,5]
       )
       msg.__send__()
       if mtp <6: # this makes it so messages can only be sent the once
-        print("sent so illegal")
+        #print("sent so illegal")
         a.legal_messages[mtp]=0
         if mtp == 2 or mtp == 3:
           a.poi = -1
       if mtp == 7:
-        self.agents[np.argmax(messages[m,14:])].legal_messages[5]=1
+        self.agents[np.argmax(messages[m,14:14+len(self.agents)])].legal_messages[5]=1
 
+     #print(f"Messanger: [{m}], {self.agents[m].name}")
       for i,ag in enumerate(self.agents):
+       #print(f"agent[{i}] updates {ag.__i_adjust__(m)}")
         if True: #Can use radio TODO
-          ag.a_state[ag.__i_adjust__(i),0] = a.pos[0]
-          ag.a_state[ag.__i_adjust__(i),1] = a.pos[1]
-          ag.a_state[ag.__i_adjust__(i),2] = 0
-          ag.a_state[ag.__i_adjust__(i),3] = 0
+          ag.a_state[ag.__i_adjust__(m),0] = a.pos[0]
+          ag.a_state[ag.__i_adjust__(m),1] = a.pos[1]
+          ag.a_state[ag.__i_adjust__(m),2] = 0
+          ag.a_state[ag.__i_adjust__(m),3] = 0
           if mtp == 6:
-            ag.a_state[ag.__i_adjust__(i),2] = act[0]
-            ag.a_state[ag.__i_adjust__(i),3] = act[1]
+            ag.a_state[ag.__i_adjust__(m),2] = act[0]
+            ag.a_state[ag.__i_adjust__(m),3] = act[1]
+      #input()
       atp = np.zeros(self.num_agent_types)
-      atp[a.a_type] = 1
+      atp[a.a_type] = 1 
       target = np.zeros(self.max_agents)
       target[a.a_num] = 1
       self.radio = {
@@ -550,7 +553,7 @@ class sar_env():
             act[1],
             messages[m,5]
             ]), 
-            messages[m,6:14],
+            messages[m,6:15],
             target,
             atp
           )
@@ -558,18 +561,24 @@ class sar_env():
         "sender":[
           np.zeros(self.max_agents),
           np.zeros(len(self.agent_types)),
-          self.agents[mi].brain_name
+          self.agents[m].brain_name
         ],
         "queue_status":[],
         "message_legality":[]
       } 
-    
+
+  def __update_memory__(self):
+    for a in self.agents:  
+      a.__update_memory__(self)
   def step(self, actions):
     self.actions = actions
     self.__look_for_key_press__()
     self.__game_logic__(0.01)
+    self.__update_memory__()
+   #print(f"before chatter:\n {self.agents[self.player].a_state[:,0:2]}")
     #print(f"rewards in step: {self.rewards}")
     self.__chatter__(actions)
+   #print(f"after chatter:\n {self.agents[self.player].a_state[:,0:2]}")
     state = self.__make_state__()
     if self.display:
       if self.player != -1:
@@ -728,10 +737,14 @@ class sar_env():
           tpose = np.array([c*self.tile_width, r*self.tile_width])
           pygame.draw.rect(self.screen, np.array(self.tiles[self.tile_map[r,c]]["color"])*(a.memory[r,c]*0.8+0.2), trect)
     # Draw agents and poi
+      dr = []
+     #print("Drawing agents")
+     #print(f"{a.a_state[:,0:2]}")
       for i in self.active_objects:
         i.render(color = i.color, screen = self.screen, pov=a)
         if self.debug_render:
           i.debug_render(color = i.color, screen = self.draw_surface)
+      #print(f"dr: {dr}")
       #print("Updated")
       for i,sol in enumerate(self.signs_of_life):
         if sol is None:
@@ -748,7 +761,7 @@ class sar_env():
     # Flip the display
     if self.display:
       pygame.display.flip()
-
+    #input()
   def handle_mouse_event(self, event):
     if event.type == pygame.MOUSEMOTION:
       for b in self.buttons:
@@ -802,7 +815,8 @@ class sar_env():
     self.rewards[agent.id]+=reward
     self.final_rewards+=reward/self.num_agents
   
-  def vectorize_state(self,state,anum,radio=False):
+  # This is a static function so call sar_env.vectorize_state
+  def vectorize_state(state,anum,radio=False):
     a1 = state['view'][anum].flatten()
     a2 = np.concatenate(
           (
@@ -815,13 +829,15 @@ class sar_env():
     a4 = np.concatenate(
           (
             state['radio']["message"].flatten(),
-            state['radio']["legal_messages"][anum].flatten(),
-            state['radio']["queue_state"][anum].flatten(),
+            state['radio']["message_legality"][anum].flatten(),
+            state['radio']["queue_status"][anum].flatten(),
             state['radio']['sender'][0],
             state['radio']['sender'][1]
           )
         )
-    return np.concatenate((a1,a2,a3,a4))
+    if not radio:
+      a4 = np.zeros(a4.shape)
+    return np.concatenate((a1,a2,a3,a4)).astype(np.double)
 
 if __name__ == "__main__":
   agents = ["Human","RoboDog","Drone"]
@@ -831,12 +847,13 @@ if __name__ == "__main__":
   state, info = game.start()
   controller = player_controller(None)
   terminated = False
-
+  #print(sar_env.vectorize_state(state,0,True).shape)
   while not terminated:
     actions = np.zeros((len(agents),14+len(agents)))
     for i,a in enumerate(agents):
-      actions[i,0:2] = controller.choose_action(state=state, game_instance=game)
-      actions[i,2:] = np.zeros(12+len(agents))
+      actions[i,0:2] = np.random.random(2)*2-1#controller.choose_action(state=state, game_instance=game)
+      actions[i,2:] = np.random.random(12+len(agents))
     state, rewards, terminated, truncated, info = game.step(actions=actions)
-    print(rewards[0])
+    #print(sar_env.vectorize_state(state,0,True).shape)
+    #input()
     game.wait(100)
