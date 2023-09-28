@@ -594,27 +594,40 @@ class sar_env():
     row, col, tile = agent.get_tile_from_pos(self)
     tile_pos = [row,col]
     mem=np.sum(agent.memory)
-    viewable = np.zeros((int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))-1
+    viewable = np.zeros((3,int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))-1
     for r in range(tile_pos[0]-self.max_agent_view_dist, tile_pos[0]+self.max_agent_view_dist+1):
       for c in range(tile_pos[1]-self.max_agent_view_dist, tile_pos[1]+self.max_agent_view_dist+1):
         # Checks if tile is within view range and if it is in the map
         if not agent.destroyed and (((r-tile_pos[0])*self.tile_width)**2 + ((c-tile_pos[1])*self.tile_width)**2 <= agent.effective_view_range**2 
         and r>=0 and r<self.tile_map.shape[0] and c>=0 and c<self.tile_map.shape[1]):
-          viewable[r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tile_map[r,c]
+          viewable[0,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.speeds[self.tiles[self.tile_map[r,c]]['name']]
+          viewable[1,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tiles[self.tile_map[r,c]]['altitude']
           self.rewards[agent.a_num]+=(1-agent.memory[r,c])*self.explore_multiplier
           agent.memory[r,c]=1
+          viewable[2,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.memory[r,c]
     agent.memory*=0.99
     #self.rewards[agent.a_num] += (np.sum(agent.memory)-mem) / self.max_agent_view_dist / self.max_agent_view_dist * self.explore_multiplier
     return viewable, agent.memory
   
   def __get_viewable_objects__(self, a):
-    return {"a_state": a.a_state, "s_state": a.s_state, "p_state":a.p_state}
+    a_s = np.copy(a.a_state)
+    a_s[:,0] = a_s[:,0]/self.map_pixel_width
+    a_s[:,1] = a_s[:,1]/self.map_pixel_height
+
+    s_s = np.copy(a.s_state)
+    s_s[:,0] = s_s[:,0]/self.map_pixel_width
+    s_s[:,1] = s_s[:,1]/self.map_pixel_height
+
+    p_s = np.copy(a.s_state)
+    p_s[:,0] = p_s[:,0]/self.map_pixel_width
+    p_s[:,1] = p_s[:,1]/self.map_pixel_height
+    return {"a_state": a_s, "s_state": s_s, "p_state":p_s}
   
   def __get_dynamic_map__(self,a):
     return np.zeros((int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))
 
   def __make_state__(self):
-    map_state = np.zeros((len(self.agents),int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))#single channel no fire
+    map_state = np.zeros((len(self.agents),3,int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))#single channel no fire
     object_state = []
     self.radio['queue_status'] = []
     self.radio['message_legality'] = []
@@ -624,12 +637,13 @@ class sar_env():
       map_state[i, :, :] = tiles
       #map_state[i,:,:,1] = self.__get_dynamic_map__(a)
       object_state.append(self.__get_viewable_objects__(a))
-      memory[i,:,:,0]=agent_memory
-      memory[i,:,:,1]=self.tile_map
+      #memory[i,:,:,0]=agent_memory
+      #memory[i,:,:,1]=self.tile_map
       self.radio['queue_status'].append(a.message_state)
       self.radio['message_legality'].append(a.legal_messages)
-
-    return {"view":map_state,"object_state":np.array(object_state),"memory":np.array(memory),"radio":self.radio}
+    state = {"view":map_state,"object_state":np.array(object_state),"radio":self.radio}
+    #print(sar_env.vectorize_state(state,0,True).shape)
+    return  state# "memory":np.array(memory),
 
   def start(self):
     self.reset()
@@ -825,8 +839,8 @@ class sar_env():
             state['object_state'][anum]["p_state"].flatten(),
           )
         )
-    a3 = state['memory'][anum].flatten()
-    a4 = np.concatenate(
+    #a3 = state['memory'][anum].flatten()
+    a3 = np.concatenate(
           (
             state['radio']["message"].flatten(),
             state['radio']["message_legality"][anum].flatten(),
@@ -836,8 +850,8 @@ class sar_env():
           )
         )
     if not radio:
-      a4 = np.zeros(a4.shape)
-    return np.concatenate((a1,a2,a3,a4)).astype(np.double)
+      a3 = np.zeros(a3.shape)
+    return np.concatenate((a1,a2,a3)).astype(np.double)
 
 if __name__ == "__main__":
   agents = ["Human","RoboDog","Drone"]
