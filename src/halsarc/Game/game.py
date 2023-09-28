@@ -286,7 +286,7 @@ class sar_env():
     bx = (self.map_pixel_width + self.w_pad - scale *3)/2
     by = (self.map_pixel_height + self.h_pad - scale *3)/2
     for i in range(8):
-      im = pygame.image.load(os.path.dirname(__file__)+f"\\Dir_{i}.png")
+      im = pygame.image.load(os.path.dirname(__file__)+f"/Dir_{i}.png")
       #print(im)
       self.dir_buttons.append(
         Button(
