@@ -570,8 +570,17 @@ class sar_env():
   def __update_memory__(self):
     for a in self.agents:  
       a.__update_memory__(self)
+  
+  def __norm_move__(self,actions):
+    for i in range(actions.shape[0]):
+      mag = np.sum(np.square(actions[i,0:2]))
+      if mag>0:
+        actions[i,0:2]/=np.sqrt(mag)
+    #print(f"move {actions[:,0:2]}")
+
   def step(self, actions):
     self.actions = actions
+    self.__norm_move__(actions)
     self.__look_for_key_press__()
     self.__game_logic__(0.01)
     self.__update_memory__()
@@ -593,19 +602,24 @@ class sar_env():
     pos = agent.pos
     row, col, tile = agent.get_tile_from_pos(self)
     tile_pos = [row,col]
-    mem=np.sum(agent.memory)
-    viewable = np.zeros((3,int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))-1
+    viewable = np.zeros((3,int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))
+    agent.memory*=0.99
     for r in range(tile_pos[0]-self.max_agent_view_dist, tile_pos[0]+self.max_agent_view_dist+1):
       for c in range(tile_pos[1]-self.max_agent_view_dist, tile_pos[1]+self.max_agent_view_dist+1):
         # Checks if tile is within view range and if it is in the map
+        #print(f"Agent: {agent.name}, Tile: {self.tiles[self.tile_map[r,c]]['name']}, speed: {agent.speeds[self.tiles[self.tile_map[r,c]]['name']]}, alt: {self.tiles[self.tile_map[r,c]]['altitude']}")#*{agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]} vis, combined: {self.tiles[self.tile_map[r,c]]['altitude']*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]}")
         if not agent.destroyed and (((r-tile_pos[0])*self.tile_width)**2 + ((c-tile_pos[1])*self.tile_width)**2 <= agent.effective_view_range**2 
         and r>=0 and r<self.tile_map.shape[0] and c>=0 and c<self.tile_map.shape[1]):
           viewable[0,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.speeds[self.tiles[self.tile_map[r,c]]['name']]
-          viewable[1,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tiles[self.tile_map[r,c]]['altitude']
+          viewable[1,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tiles[self.tile_map[r,c]]['altitude']#*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]
           self.rewards[agent.a_num]+=(1-agent.memory[r,c])*self.explore_multiplier
           agent.memory[r,c]=1
-          viewable[2,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.memory[r,c]
-    agent.memory*=0.99
+        viewable[2,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.memory[r,c]
+    #np.set_printoptions(edgeitems=30, linewidth=100000, formatter=dict(float=lambda x: "%.3g" % x))
+    #print(agent.name)
+    #print(viewable[1])
+    #np.set_printoptions(threshold=np.inf)
+    #print(agent.memory)
     #self.rewards[agent.a_num] += (np.sum(agent.memory)-mem) / self.max_agent_view_dist / self.max_agent_view_dist * self.explore_multiplier
     return viewable, agent.memory
   
@@ -868,6 +882,7 @@ if __name__ == "__main__":
       actions[i,0:2] = np.random.random(2)*2-1#controller.choose_action(state=state, game_instance=game)
       actions[i,2:] = np.random.random(12+len(agents))
     state, rewards, terminated, truncated, info = game.step(actions=actions)
+    #print(state['view'][0][2])
     #print(sar_env.vectorize_state(state,0,True).shape)
     #input()
     game.wait(100)
