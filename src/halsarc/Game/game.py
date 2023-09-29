@@ -614,7 +614,8 @@ class sar_env():
           viewable[1,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tiles[self.tile_map[r,c]]['altitude']#*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]
           self.rewards[agent.a_num]+=(1-agent.memory[r,c])*self.explore_multiplier
           agent.memory[r,c]=1
-        viewable[2,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.memory[r,c]
+        if r>=0 and r<self.tile_map.shape[0] and c>=0 and c<self.tile_map.shape[1]:
+          viewable[2,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.memory[r,c]
     #np.set_printoptions(edgeitems=30, linewidth=100000, formatter=dict(float=lambda x: "%.3g" % x))
     #print(agent.name)
     #print(viewable[1])
@@ -879,7 +880,7 @@ if __name__ == "__main__":
   while not terminated:
     actions = np.zeros((len(agents),14+len(agents)))
     for i,a in enumerate(agents):
-      actions[i,0:2] = np.random.random(2)*2-1#controller.choose_action(state=state, game_instance=game)
+      actions[i,0:2] = np.random.random(2)*2-0.5#controller.choose_action(state=state, game_instance=game)
       actions[i,2:] = np.random.random(12+len(agents))
     state, rewards, terminated, truncated, info = game.step(actions=actions)
     #print(state['view'][0][2])

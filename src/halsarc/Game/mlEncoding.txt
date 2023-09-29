@@ -20,6 +20,7 @@ State:
 {
   "view":[
             num_agents,
+            3 speed,altitude,memory
             self.max_agent_view_dist*2+1,
             self.max_agent_view_dist*2+1
           ]
@@ -29,7 +30,7 @@ State:
       "s_state": float [x,y,age,recency], 
       "p_state": float [x,y,destroyed,saved,age,recency]
     }
-  "memory": [num_agents] [height,width,2],
+  #"memory": [num_agents] [height,width,2],
   "radio":
   {
     "message": [
