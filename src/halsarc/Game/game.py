@@ -252,7 +252,7 @@ class sar_env():
     mt = np.zeros(8)
     mt[msg_type]=1
     self.actions[self.player,6:14] = mt
-    self.actions[self.player,14:] = -1
+    self.actions[self.player,14:] = 0
 
   def __make_buttons__(self):
     names = ["SOS","Sol","Found POI","Help POI", "Saved", "Roger", "Going", "Go"]
@@ -603,19 +603,19 @@ class sar_env():
     row, col, tile = agent.get_tile_from_pos(self)
     tile_pos = [row,col]
     viewable = np.zeros((3,int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))
-    agent.memory*=0.99
+    agent.memory*=0.98
     for r in range(tile_pos[0]-self.max_agent_view_dist, tile_pos[0]+self.max_agent_view_dist+1):
       for c in range(tile_pos[1]-self.max_agent_view_dist, tile_pos[1]+self.max_agent_view_dist+1):
         # Checks if tile is within view range and if it is in the map
         #print(f"Agent: {agent.name}, Tile: {self.tiles[self.tile_map[r,c]]['name']}, speed: {agent.speeds[self.tiles[self.tile_map[r,c]]['name']]}, alt: {self.tiles[self.tile_map[r,c]]['altitude']}")#*{agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]} vis, combined: {self.tiles[self.tile_map[r,c]]['altitude']*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]}")
-        if not agent.destroyed and (((r-tile_pos[0])*self.tile_width)**2 + ((c-tile_pos[1])*self.tile_width)**2 <= agent.effective_view_range**2 
-        and r>=0 and r<self.tile_map.shape[0] and c>=0 and c<self.tile_map.shape[1]):
-          viewable[0,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.speeds[self.tiles[self.tile_map[r,c]]['name']]
-          viewable[1,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tiles[self.tile_map[r,c]]['altitude']#*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]
-          self.rewards[agent.a_num]+=(1-agent.memory[r,c])*self.explore_multiplier
-          agent.memory[r,c]=1
         if r>=0 and r<self.tile_map.shape[0] and c>=0 and c<self.tile_map.shape[1]:
-          viewable[2,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.memory[r,c]
+          if not agent.destroyed and (((r-tile_pos[0])*self.tile_width)**2 + ((c-tile_pos[1])*self.tile_width)**2 <= agent.effective_view_range**2):
+            viewable[0,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.speeds[self.tiles[self.tile_map[r,c]]['name']]
+            viewable[1,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tiles[self.tile_map[r,c]]['altitude']#*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]
+            self.rewards[agent.a_num]+=(1-agent.memory[r,c])*self.explore_multiplier
+            agent.memory[r,c]=1
+        else:
+          viewable[0:3,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = -1
     #np.set_printoptions(edgeitems=30, linewidth=100000, formatter=dict(float=lambda x: "%.3g" % x))
     #print(agent.name)
     #print(viewable[1])
@@ -872,18 +872,21 @@ if __name__ == "__main__":
   agents = ["Human","RoboDog","Drone"]
   pois = ["Child", "Child", "Adult"]
   premade_map = np.load("../LevelGen/Island/Map.npy")
-  game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,player=0)
+  game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,player=2,explore_multiplier=0.005)
   state, info = game.start()
   controller = player_controller(None)
   terminated = False
   #print(sar_env.vectorize_state(state,0,True).shape)
+  rew = np.zeros(3)
   while not terminated:
     actions = np.zeros((len(agents),14+len(agents)))
     for i,a in enumerate(agents):
-      actions[i,0:2] = np.random.random(2)*2-0.5#controller.choose_action(state=state, game_instance=game)
+      actions[i,0:2] = controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
       actions[i,2:] = np.random.random(12+len(agents))
     state, rewards, terminated, truncated, info = game.step(actions=actions)
     #print(state['view'][0][2])
     #print(sar_env.vectorize_state(state,0,True).shape)
     #input()
+    rew += rewards
     game.wait(100)
+  print(rew)
