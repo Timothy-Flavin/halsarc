@@ -58,7 +58,7 @@ class Message():
       f" SoS! ",
       f" Sign of Life found!",
       f" Found {self.game_instance.pois[self.poi_id].name}",
-      f" Needs a {self.game_instance.pois[self.poi_id].save_by} to be saved",
+      f" {self.game_instance.pois[self.poi_id].name} Needs {self.game_instance.pois[self.poi_id].save_by}",
       f" Target Saved: {self.game_instance.pois[self.poi_id].name}",
       f" Roger",
       f" I want to go {self.magnitude:.2f} {self.dir_to_cardinal(self.dx,self.dy)} <{self.dx:.2f} {self.dy:.2f}>",

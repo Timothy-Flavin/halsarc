@@ -347,7 +347,7 @@ class sar_env():
 
   def __init__(self, 
                tile_map, 
-               max_agents=None, 
+               max_agents, 
                max_poi=None, 
                max_sol=10, 
                vectorize_state=True, 
@@ -425,14 +425,14 @@ class sar_env():
       self.agents[-1].p_state = np.zeros((self.max_poi,6)) # x,y,destroyed,saved,age,recency
       self.agents[-1].s_state = np.zeros((self.max_sol,4)) # x,y,age,recency
       self.add_entity(self.agents[-1])
-      self.actions.append([random.random(),random.random()])
+      #self.actions.append([random.random(),random.random()])
       if agent["grounded"]:
         if agent["view_range"]*max_alt > max_view:
           max_view = agent["view_range"]*max_alt
       else:
         if agent["view_range"] > max_view:
           max_view = agent["view_range"]
-    self.actions = np.array(self.actions)
+    #self.actions = np.array(self.actions)
     self.max_agent_view_dist = max_view
     self.num_agents = len(self.agents)
     self.final_rewards = np.zeros(self.num_agents)
@@ -839,7 +839,7 @@ class sar_env():
     if obj.hidden:
       reward += obj.found_reward
     if obj.entity_type=="person_of_interest":
-      if self.agent_type_names[agent.a_num] in obj.save_by:
+      if self.agent_type_names[agent.a_type] in obj.save_by:
         reward += obj.saved_reward
         obj.saved = True
     self.rewards[agent.id]+=reward
@@ -888,10 +888,12 @@ class sar_env():
 
 
 if __name__ == "__main__":
-  agents = ["Human","RoboDog","Drone"]
+  agents = ["Human","Drone","RoboDog"]
   pois = ["Child", "Child", "Adult"]
   premade_map = np.load("../LevelGen/Island/Map.npy")
-  game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,player=2,explore_multiplier=0.005)
+  game = sar_env(max_agents=3,display=True, tile_map=premade_map, 
+                 agent_names=agents, poi_names=pois,player=1,
+                 explore_multiplier=0.005)
   state, info = game.start()
   controller = player_controller(None)
   terminated = False
@@ -900,8 +902,9 @@ if __name__ == "__main__":
   while not terminated:
     actions = np.zeros((len(agents),14+len(agents)))
     for i,a in enumerate(agents):
-      actions[i,0:2] = controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
-      actions[i,2:] = np.random.random(12+len(agents))
+      if i == game.player:
+        actions[i,0:2] = controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
+      #actions[i,2:] = np.random.random(12+len(agents))
     state, rewards, terminated, truncated, info = game.step(actions=actions)
     #print(state['view'][0][2])
     #print(sar_env.vectorize_state(state,0,True).shape)

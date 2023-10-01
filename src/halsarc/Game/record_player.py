@@ -57,7 +57,8 @@ class player_recorder():
 
   def record(self):
     print(self.premade_map.shape)
-    self.game = sar_env(display=True, 
+    self.game = sar_env(max_agents=self.max_agents,
+                        display=True, 
                         tile_map=self.premade_map, 
                         agent_names=self.agents, 
                         poi_names=self.pois,
