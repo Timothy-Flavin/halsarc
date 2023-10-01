@@ -3,9 +3,10 @@ from halsarc.Game.game import sar_env
 import pickle
 import os
 import time
+import random
 
 class player_recorder():
-  def __init__(self, player, agents, pois, premade_map, max_agents, exp_reward=0.005, data_folder="./human_data/"):
+  def __init__(self, player, agents, pois, premade_map, max_agents, exp_reward=0.005, data_folder="./human_data/",fdirs = ["./nets"]):
     self.data_folder = data_folder
     self.max_agents = max_agents
     self.agents = agents #["Human", "RoboDog", "Drone"]
@@ -13,6 +14,7 @@ class player_recorder():
     self.premade_map = premade_map
     self.exp_reward= exp_reward
     self.active_player = player
+    self.fdirs = fdirs
     if not os.path.exists(data_folder):
       os.mkdir(data_folder)
 
@@ -61,27 +63,23 @@ class player_recorder():
                         poi_names=self.pois,
                         max_poi=3,
                         explore_multiplier=self.exp_reward,
-                        player=self.active_player)
+                        player=self.active_player
+                        )
     state, info = self.game.start()
     terminated = False
     dirs = ['w','a','s','d','wd','ds','sa','aw','']
-    ai_type="trees"
-
-    sk_agents={}
-    print("record player path")
-    print(os.path.dirname(os.path.dirname(__file__))+f"/Agents/{ai_type}")
-    f = os.path.dirname(os.path.dirname(__file__))+f"/Agents/{ai_type}"
-    fdirs = os.listdir(os.path.dirname(os.path.dirname(__file__))+f"/Agents/{ai_type}")
-    for f in fdirs:
-      print(f)
+    brains={}
+    #f = os.path.dirname(os.path.dirname(__file__))+f"/Agents/{ai_type}"
+    #fdirs = os.listdir(os.path.dirname(os.path.dirname(__file__))+f"/Agents/{ai_type}")
+    for a in self.agents:
+      r = random.randint(0,len(self.fdirs)-1)
+      fname = self.fdirs[r]+a+".pkl"
       try:
-        filehandler = open(f"../Agents/{ai_type}/{f}", 'rb') 
-        name = f.split("_")[0]
-        print(name)
-        print(f)
-        sk_agents[name]=(pickle.load(filehandler))
+        filehandler = open(fname, 'rb') 
+        print(f"found {fname}")
+        brains[a]=(pickle.load(filehandler))
       except:
-        print("crap") 
+        print(f"Could not load agent at '{fname}'") 
 
     
     state_record = []  # keeps a memory of the game states
@@ -101,9 +99,7 @@ class player_recorder():
         or info.player_input["D"]):
           begin_sim=True
       else:
-        
         actions = np.zeros((len(self.agents),14+info.max_agents))
-        messages = np.zeros((len(self.agents),14+info.max_agents+len(info.agent_types)))
         for i,a in enumerate(self.agents):
           dir=''
           if self.active_player == i:
@@ -116,9 +112,9 @@ class player_recorder():
             if info.player_input["D"]:
               dir+="d"
             actions[i,0:2] = self.player_controls(dir)
-          elif a in sk_agents:
-            sk_state = [np.concatenate((state['view'][i].flatten(),state['object_state'][i].flatten(),state['memory'][i].flatten()))]
-            actions[i] = self.class_to_action(sk_agents[a].predict(sk_state))
+          elif a in brains:
+            actions[i] = brains[a].action(state,i)
+            #actions[i] = self.class_to_action(brains[a].predict(sk_state))
           else:
             actions[i,0:2] = self.player_controls(dir) # if not a player and no skmodel then do action ''
         
@@ -182,5 +178,6 @@ if __name__=="__main__":
                          pois=['Child','Child','Adult'],
                          premade_map=premade_map,
                          max_agents=3,
-                         data_folder="./recorded_data/")
+                         data_folder="./recorded_data/",
+                         fdirs=['../Agents/nets/','../Agents/trees/'])
   rcdr.record()

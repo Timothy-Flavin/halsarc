@@ -381,6 +381,7 @@ class sar_env():
     """
     random.seed(seed)
     self.player = player
+    self.action_size = 14+self.max_agents
     self.explore_multiplier = explore_multiplier
     self.radio = {"1":1}
     self.__set_max_entities__(agent_names, poi_names, max_agents, max_poi, max_sol)
@@ -471,7 +472,7 @@ class sar_env():
     self.objects = []
     self.agents = []
     self.pois = []
-    self.actions = []
+    self.actions = np.zeros((self.max_agents,self.action_size))
     self.signs_of_life = [None]*self.max_sol
     self.cur_sol = 0
     self.frame_num=0
@@ -867,6 +868,24 @@ class sar_env():
     if not radio:
       a3 = np.zeros(a3.shape)
     return np.concatenate((a1,a2,a3)).astype(np.double)
+
+  def random_action(self):
+    mtype = np.zeros(8)
+    mtype[random.randint(0,7)] = 1
+    targ = np.zeros(self.max_agents)
+    targ[random.randint(0,self.max_agents-1)] = 1
+    ar = np.zeros((1,self.action_size))
+    ar[0,0]=random.random()*2-1
+    ar[0,1]=random.random()*2-1
+    ar[0,2]=random.random()
+    ar[0,3]=random.random()*2-1
+    ar[0,4]=random.random()*2-1
+    ar[0,5]=random.random()*self.max_instruction
+    ar[0,6:14]=mtype
+    ar[0,14:14+self.max_agents]=targ
+    #print(ar.shape)
+    return ar
+
 
 if __name__ == "__main__":
   agents = ["Human","RoboDog","Drone"]
