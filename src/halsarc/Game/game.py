@@ -381,7 +381,7 @@ class sar_env():
     """
     random.seed(seed)
     self.player = player
-    self.action_size = 14+self.max_agents
+    self.action_size = 14+max_agents
     self.explore_multiplier = explore_multiplier
     self.radio = {"1":1}
     self.__set_max_entities__(agent_names, poi_names, max_agents, max_poi, max_sol)
