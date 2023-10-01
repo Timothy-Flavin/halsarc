@@ -141,16 +141,14 @@ class player_recorder():
     print(f"action shape: {action_record.shape}")
 
     try:
-      al = np.load(self.agents[self.active_player]+"_action_record.npy")
-      print(f"loaded shape: {al.shape}")
-      print(f"game shape: {al.shape}")
+      al = np.load(f"{self.data_folder}{self.agents[self.active_player]}_action_record.npy")
       action_record = np.concatenate((al, action_record))
       print(f"after concat shape: {action_record.shape}")
     except:
       print("No action record found for: " + self.agents[self.active_player])
 
     try:
-      reward_record = np.concatenate((np.load(self.agents[self.active_player]+"_reward_record.npy"), reward_record))
+      reward_record = np.concatenate((np.load(f"{self.data_folder}{self.agents[self.active_player]}_reward_record.npy"), reward_record))
     except:
       print("No reward record found for: " + self.agents[self.active_player])
 

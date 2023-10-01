@@ -1,7 +1,7 @@
 {
   "Adult":{   
-    "speed":0.5,
-    "active_time":10.0,
+    "speed":2,
+    "active_time":5.0,
     "color":[200,180,80,255],
     "moves":"random",
     "drop_prob":0.005,
@@ -19,8 +19,8 @@
     "camo":0.5
   },
   "Child":{
-    "speed":0.4,
-    "active_time":8.0,
+    "speed":1.5,
+    "active_time":4.0,
     "color":[250,180,100,255],
     "moves":"random",
     "drop_prob":0.005,
