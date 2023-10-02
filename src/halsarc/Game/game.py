@@ -17,7 +17,7 @@ import json
 from halsarc.Game.controllers import *
 # Set up the drawing window
 
-from halsarc.Game.searcher import searcher #halsarc.Game.
+from searcher import searcher #halsarc.Game.
 from halsarc.Game.poi import person_of_interest #halsarc.Game.
 from halsarc.Game.sol import sign_of_life
 from halsarc.Game.message import Message
@@ -574,8 +574,8 @@ class sar_env():
         np.concatenate(
           (
             np.array([
-            a.pos[0],
-            a.pos[1],
+            a.pos[0]/self.map_pixel_width,
+            a.pos[1]/self.map_pixel_height,
             act[0], 
             act[1],
             messages[m,5]
@@ -1003,9 +1003,10 @@ if __name__ == "__main__":
     for i,a in enumerate(agents):
       #game.agents[i].brain_name ="hal"
       #if i == game.player:
-      actions[i,0:2] = controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
+      actions[i,0:2] = np.random.random(2)#controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
       #actions[i,2:] = np.random.random(12+len(agents))
     state, rewards, terminated, truncated, info = game.step(actions=actions)
+    #print(state['object_state'][0])
     #sar_env.boid_state(state, 0, True)
     #print(state['view'][0][2])
     #print(sar_env.vectorize_state(state,0,True).shape)

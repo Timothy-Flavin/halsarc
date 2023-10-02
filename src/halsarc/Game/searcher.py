@@ -98,6 +98,8 @@ class searcher(entity):
         #self.a_state[ia] = np.zeros(game_instance.num_agent_types+6)
         self.a_state[ia,2] = 0#obj.pos[0] - self.a_state[ia,0]
         self.a_state[ia,3] = 0#obj.pos[1] - self.a_state[ia,1]
+        if ia == 0:
+          self.a_state[ia,2:4] = self.cur_action
         self.a_state[ia,0] = obj.pos[0]
         self.a_state[ia,1] = obj.pos[1]
         self.a_state[ia,4] = 1-int(obj.destroyed)
