@@ -17,8 +17,8 @@ import json
 from halsarc.Game.controllers import *
 # Set up the drawing window
 
-from halsarc.Game.searcher import searcher #halsarc.Game.
-from halsarc.Game.poi import person_of_interest
+from searcher import searcher #halsarc.Game.
+from poi import person_of_interest #halsarc.Game.
 from halsarc.Game.sol import sign_of_life
 from halsarc.Game.message import Message
 
@@ -419,11 +419,7 @@ class sar_env():
     for i,agent_name in enumerate(self.agent_names):
       agent_name_ct[agent_name] = agent_name_ct.get(agent_name,0)+1
       agent = self.agent_blueprint[agent_name]
-      self.agents.append(searcher(agent, i, agent_name, agent_name_ct[agent_name], self.agent_types[agent_name], pygame)) 
-      self.agents[-1].memory = np.zeros((self.tile_map.shape[0], self.tile_map.shape[1]))
-      self.agents[-1].a_state = np.zeros((self.max_agents,6+self.num_agent_types)) # x,y,dx,dy,alive,recency,[atype] one hot coded
-      self.agents[-1].p_state = np.zeros((self.max_poi,6)) # x,y,destroyed,saved,age,recency
-      self.agents[-1].s_state = np.zeros((self.max_sol,4)) # x,y,age,recency
+      self.agents.append(searcher(agent, i, agent_name, agent_name_ct[agent_name], self.agent_types[agent_name], pygame,self)) 
       self.add_entity(self.agents[-1])
       #self.actions.append([random.random(),random.random()])
       if agent["grounded"]:
@@ -523,6 +519,21 @@ class sar_env():
         #print("sent so illegal")
         a.legal_messages[mtp]=0
         if mtp == 2 or mtp == 3:
+          if mtp == 3:
+            for t_agent in self.agents:
+              t_agent.p_state
+              t_agent.p_state[a.poi,6] = 0
+              # x,y,destroyed,saved,age,recency,saveable
+              if a.p_state[a.poi,5] > t_agent.p_state[a.poi,5]:
+                t_agent.p_state[a.poi,0:2] = self.pois[a.poi].pos
+              for svb in self.pois[a.poi].save_by:
+                if self.agent_names[t_agent.a_type] == svb:
+                  t_agent.p_state[a.poi,6] = 1
+                  
+            #print(f"{a.name} said that {self.pois[a.poi].name} ({a.poi}) can be saved by {self.pois[a.poi].save_by}")
+            #for t_agent in self.agents:
+              #print(f"Resulting poi state: {t_agent.p_state}")
+            #input()
           a.poi = -1
       if mtp == 7:
         self.agents[np.argmax(messages[m,14:14+len(self.agents)])].legal_messages[5]=1
@@ -615,13 +626,10 @@ class sar_env():
             viewable[1,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tiles[self.tile_map[r,c]]['altitude']#*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]
             self.rewards[agent.a_num]+=(1-agent.memory[r,c])*self.explore_multiplier
             agent.memory[r,c]=1
+          viewable[2,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.memory[r,c]#*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]
         else:
           viewable[0:3,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = -1
-    #np.set_printoptions(edgeitems=30, linewidth=100000, formatter=dict(float=lambda x: "%.3g" % x))
-    #print(agent.name)
-    #print(viewable[1])
-    #np.set_printoptions(threshold=np.inf)
-    #print(agent.memory)
+    
     #self.rewards[agent.a_num] += (np.sum(agent.memory)-mem) / self.max_agent_view_dist / self.max_agent_view_dist * self.explore_multiplier
     return viewable, agent.memory
   
@@ -838,6 +846,7 @@ class sar_env():
     reward = 0
     if obj.hidden:
       reward += obj.found_reward
+      obj.hidden=False
     if obj.entity_type=="person_of_interest":
       if self.agent_type_names[agent.a_type] in obj.save_by:
         reward += obj.saved_reward
@@ -869,7 +878,7 @@ class sar_env():
       a3 = np.zeros(a3.shape)
     return np.concatenate((a1,a2,a3)).astype(np.double)
 
-  def random_action(self):
+  def random_action(self, max_instruction=5):
     mtype = np.zeros(8)
     mtype[random.randint(0,7)] = 1
     targ = np.zeros(self.max_agents)
@@ -880,7 +889,7 @@ class sar_env():
     ar[0,2]=random.random()
     ar[0,3]=random.random()*2-1
     ar[0,4]=random.random()*2-1
-    ar[0,5]=random.random()*self.max_instruction
+    ar[0,5]=random.random()*max_instruction
     ar[0,6:14]=mtype
     ar[0,14:14+self.max_agents]=targ
     #print(ar.shape)
@@ -902,6 +911,7 @@ if __name__ == "__main__":
   while not terminated:
     actions = np.zeros((len(agents),14+len(agents)))
     for i,a in enumerate(agents):
+      #game.agents[i].brain_name ="hal"
       if i == game.player:
         actions[i,0:2] = controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
       #actions[i,2:] = np.random.random(12+len(agents))

@@ -5,17 +5,18 @@ import math
 
 class searcher(entity):
   # Speed is how many times per frame the agent can move
-  def __init__(self, agent_blueprint, a_num, name, num, a_type, game):
+  def __init__(self, agent_blueprint, a_num, name, num, a_type, game, game_instance):
     entity.__init__(self, game, np.array([200,200],dtype=np.float32), 50, 5, entity_type="learnable_agent")
     self.name = name+str(num)
     self.a_num = a_num
     self.a_type = a_type
     self.poi=-1
     # These next 4 will be instantiated by the game on start
-    self.memory = None
-    self.a_state = None
-    self.p_state = None
-    self.s_state = None
+    self.memory = np.zeros((game_instance.tile_map.shape[0], game_instance.tile_map.shape[1]))
+    self.a_state = np.zeros((game_instance.max_agents,6+game_instance.num_agent_types)) # x,y,dx,dy,alive,recency,[atype] one hot coded
+    self.p_state = np.zeros((game_instance.max_poi,7)) # x,y,destroyed,saved,age,recency,saveable
+    self.p_state[:,6] = 1
+    self.s_state = np.zeros((game_instance.max_sol,4)) # x,y,age,recency
     self.commanded = 0
     self.command_dir = np.zeros(2)
     self.command_frame = 2**31-1
@@ -118,7 +119,7 @@ class searcher(entity):
         self.s_state[i] = [sol.pos[0],sol.pos[1],sol.time_active/100.0,1.0]
     
     for i,poi in enumerate(game_instance.pois):
-      self.p_state[i,-1]*=0.99
+      self.p_state[i,5]*=0.99
       if np.sum(np.square(self.pos - poi.pos)) < self.effective_view_range*self.effective_view_range:
         if not poi.saved:
           self.poi = i
@@ -127,11 +128,13 @@ class searcher(entity):
           self.poi = i
           if poi.saved:
             self.legal_messages[4] = 1
+            self.p_state[i,6] = 1
           else:
             self.legal_messages[3] = 1
-          # x,y,destroyed,saved,age,recency
-        self.p_state[i] = [poi.pos[0],poi.pos[1],1-int(poi.destroyed), 1-int(poi.saved), poi.time_active/100.0,1]
-
+            self.p_state[i,6] = 0
+          # x,y,destroyed,saved,age,recency,saveable
+        self.p_state[i] = [poi.pos[0],poi.pos[1],1-int(poi.destroyed), 1-int(poi.saved), poi.time_active/100.0,1,self.p_state[i,6]]
+    #print(f"{self.name} pois: \n{self.p_state}")
   def update(self, delta_time, game_instance):
     self.__handle_action__(game_instance)
     self.time_active+=1

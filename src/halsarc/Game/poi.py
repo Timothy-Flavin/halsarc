@@ -70,8 +70,8 @@ class person_of_interest(entity):
       h = max(int(self.size/5),2)
       trect = self.game.Rect(self.pos[0]-self.size,self.pos[1]-self.size-h, int(self.size*2-self.size*2*self.time_active/self.active_time),h)
       self.game.draw.rect(screen, (0,100,250), trect)
-    elif pov is not None and pov.p_state[self.p_num,-1]>0:
-      self.game.draw.circle(screen, np.array(color)*pov.p_state[self.p_num,-1], center=(float(pov.p_state[self.p_num,0]), float(pov.p_state[self.p_num,1])), radius=self.size)
+    elif pov is not None and pov.p_state[self.p_num,5]>0:
+      self.game.draw.circle(screen, np.array(color)*pov.p_state[self.p_num,5], center=(float(pov.p_state[self.p_num,0]), float(pov.p_state[self.p_num,1])), radius=self.size)
       h = max(int(self.size/5),2)
       trect = self.game.Rect(pov.p_state[self.p_num,0]-self.size,pov.p_state[self.p_num,1]-self.size-h, int(self.size*2-self.size*2*self.time_active/self.active_time),h)
       self.game.draw.rect(screen, (0,100,250), trect)
