@@ -17,8 +17,8 @@ import json
 from halsarc.Game.controllers import *
 # Set up the drawing window
 
-from searcher import searcher #halsarc.Game.
-from poi import person_of_interest #halsarc.Game.
+from halsarc.Game.searcher import searcher #halsarc.Game.
+from halsarc.Game.poi import person_of_interest #halsarc.Game.
 from halsarc.Game.sol import sign_of_life
 from halsarc.Game.message import Message
 
@@ -644,7 +644,7 @@ class sar_env():
     s_s[:,0] = s_s[:,0]/self.map_pixel_width
     s_s[:,1] = s_s[:,1]/self.map_pixel_height
 
-    p_s = np.copy(a.s_state)
+    p_s = np.copy(a.p_state)
     p_s[:,0] = p_s[:,0]/self.map_pixel_width
     p_s[:,1] = p_s[:,1]/self.map_pixel_height
     return {"a_state": a_s, "s_state": s_s, "p_state":p_s}
