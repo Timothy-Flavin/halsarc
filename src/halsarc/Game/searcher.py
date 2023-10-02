@@ -17,7 +17,9 @@ class searcher(entity):
     self.p_state = np.zeros((game_instance.max_poi,7)) # x,y,destroyed,saved,age,recency,saveable
     self.p_state[:,6] = 1
     self.s_state = np.zeros((game_instance.max_sol,4)) # x,y,age,recency
+    self.command_accepted = False
     self.commanded = 0
+    self.commanded_by = -1
     self.command_dir = np.zeros(2)
     self.command_frame = 2**31-1
     self.message_state = np.zeros(3) # sent, denied, not attempted
@@ -49,13 +51,18 @@ class searcher(entity):
       self.visibilities[k] = agent_blueprint["visibilities"][k]
 
   def __handle_action__(self, game_instance):
-    if self.commanded>0 and self.command_frame <= game_instance.frame_num:
+    if self.command_accepted and \
+    self.commanded>0 and \
+    self.command_frame <= game_instance.frame_num:
       self.cur_action = self.command_dir
       self.commanded -= 1
+    if self.commanded <= 0:
+      self.command_accepted = False
+      self.commanded_by = -1
     self.take_action(game_instance)
     self.pos[0] = max(min(self.pos[0],game_instance.map_pixel_width-0.01),0)
     self.pos[1] = max(min(self.pos[1],game_instance.map_pixel_height-0.01),0)
-    row, col, self.tile = self.get_tile_from_pos( game_instance)
+    row, col, self.tile = self.get_tile_from_pos(game_instance)
 
   def __i_adjust__(self,i):
     #print(f"Agent: {self.a_num}, i {i}")
@@ -122,18 +129,21 @@ class searcher(entity):
       self.p_state[i,5]*=0.99
       if np.sum(np.square(self.pos - poi.pos)) < self.effective_view_range*self.effective_view_range:
         if not poi.saved:
-          self.poi = i
           game_instance.found(poi, self)
+          #print(f"hidden: {poi.hidden}, saved: {poi.saved}, h: {game_instance.pois[i].hidden}, s: {game_instance.pois[i].saved}")
           poi.hidden = False
           self.poi = i
           if poi.saved:
+            #print("Searcher knows saved")
             self.legal_messages[4] = 1
             self.p_state[i,6] = 1
+            #input()
           else:
+            #print("Searcher knows not saved")
             self.legal_messages[3] = 1
             self.p_state[i,6] = 0
           # x,y,destroyed,saved,age,recency,saveable
-        self.p_state[i] = [poi.pos[0],poi.pos[1],1-int(poi.destroyed), 1-int(poi.saved), poi.time_active/100.0,1,self.p_state[i,6]]
+        self.p_state[i] = [poi.pos[0],poi.pos[1],int(poi.destroyed), int(poi.saved), poi.time_active/100.0,1,self.p_state[i,6]]
     #print(f"{self.name} pois: \n{self.p_state}")
   def update(self, delta_time, game_instance):
     self.__handle_action__(game_instance)

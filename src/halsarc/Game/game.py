@@ -207,6 +207,8 @@ class sar_env():
     al[agent]=1
     self.actions[self.player,14:] = al
     if self.agents[agent].commanded <=0:
+      self.agents[agent].commanded_by = self.player
+      self.agents[agent].command_accepted = True
       self.agents[agent].commanded = 5
       self.agents[agent].command_dir = dirs[self.bnum]
       self.agents[agent].command_frame = self.frame_num
@@ -243,7 +245,7 @@ class sar_env():
         a.a_state[a.__i_adjust__(i),2] = self.agents[self.player].cur_action[0]
         a.a_state[a.__i_adjust__(i),3] = self.agents[self.player].cur_action[1]
 
-  def __general_button__(self,button,msg_type, poi=-1):
+  def __general_button__(self, button,msg_type, poi=-1):
     self.actions[self.player]
     self.actions[self.player,2]=1.0
     self.actions[self.player,3]=0
@@ -390,6 +392,8 @@ class sar_env():
     self.__make_buttons__()
     self.player_input = {'W': False, 'A': False, 'S':False, 'D': False}
     self.reset()
+    self.commanded_size = max_agents + len(self.agent_types)+2
+
 
   def __reset_state_constants__(self):
     self.rewards = np.zeros(self.max_agents)
@@ -531,15 +535,24 @@ class sar_env():
                   t_agent.p_state[a.poi,6] = 1
         if mtp == 4:
           for t_agent in self.agents:
-            t_agent.p_state[a.poi,3] = a.p_state[a.poi,3]
+            t_agent.p_state[a.poi] = a.p_state[a.poi]
             #print(f"{a.name} said that {self.pois[a.poi].name} ({a.poi}) can be saved by {self.pois[a.poi].save_by}")
             #for t_agent in self.agents:
               #print(f"Resulting poi state: {t_agent.p_state}")
             #input()
           a.poi = -1
-      if mtp == 7:
-        self.agents[np.argmax(messages[m,14:14+len(self.agents)])].legal_messages[5]=1
+     
+        if mtp == 5 and a.commanded > 0:
+          a.command_accepted = True
 
+      if mtp == 7:
+        targ = np.argmax(messages[m,14:14+len(self.agents)])
+        self.agents[targ].legal_messages[5]=1
+        self.agents[targ].commanded_by = a.a_num
+        if self.agents[targ].commanded <=0:
+          self.agents[targ].commanded = messages[m,5]
+          self.agents[targ].command_dir = messages[m,3:5]
+          self.agents[targ].command_frame = self.frame_num
      #print(f"Messanger: [{m}], {self.agents[m].name}")
       for i,ag in enumerate(self.agents):
        #print(f"agent[{i}] updates {ag.__i_adjust__(m)}")
@@ -578,7 +591,8 @@ class sar_env():
           self.agents[m].brain_name
         ],
         "queue_status":[],
-        "message_legality":[]
+        "message_legality":[],
+        "commanded_by":[],
       } 
 
   def __update_memory__(self):
@@ -647,16 +661,34 @@ class sar_env():
     p_s = np.copy(a.p_state)
     p_s[:,0] = p_s[:,0]/self.map_pixel_width
     p_s[:,1] = p_s[:,1]/self.map_pixel_height
+    #print(f"\n{a.name}")
+    #print(p_s)
     return {"a_state": a_s, "s_state": s_s, "p_state":p_s}
   
   def __get_dynamic_map__(self,a):
     return np.zeros((int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))
+
+  def __get_commanded_state__(self,a):
+    commander_type = np.zeros(len(self.agent_types))
+    commander = np.zeros(self.max_agents)
+    if a.commanded_by >-1:
+      commander[a.commanded_by] = 1
+      commander_type[self.agents[a.commanded_by].a_type] = 1
+    command_xy = a.command_dir
+    cstate = np.concatenate([
+      commander,
+      command_xy,
+      commander_type
+    ]
+    )
+    return cstate
 
   def __make_state__(self):
     map_state = np.zeros((len(self.agents),3,int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))#single channel no fire
     object_state = []
     self.radio['queue_status'] = []
     self.radio['message_legality'] = []
+    self.radio['commanded_by'] = []
     memory=np.zeros((len(self.agents),self.tile_map.shape[0],self.tile_map.shape[1],2))
     for i,a in enumerate(self.agents):
       tiles, agent_memory = self.__get_viewable_tiles__(a)
@@ -667,6 +699,7 @@ class sar_env():
       #memory[i,:,:,1]=self.tile_map
       self.radio['queue_status'].append(a.message_state)
       self.radio['message_legality'].append(a.legal_messages)
+      self.radio['commanded_by'].append(self.__get_commanded_state__(a))
     state = {"view":map_state,"object_state":np.array(object_state),"radio":self.radio}
     #print(sar_env.vectorize_state(state,0,True).shape)
     return  state# "memory":np.array(memory),
@@ -718,8 +751,8 @@ class sar_env():
   def __game_logic__(self, delta_time):
     self.rewards=np.zeros(self.num_agents)
     for i,agent in enumerate(self.agents):
-      if not agent.destroyed:
-        self.rewards[i] -= 0.01
+      #if not agent.destroyed:
+        #self.rewards[i] -= 0.01
       agent.cur_action = self.actions[i,0:2]
     for i in self.active_objects:
       if i.destroyed:
@@ -853,9 +886,11 @@ class sar_env():
       if self.agent_type_names[agent.a_type] in obj.save_by:
         reward += obj.saved_reward
         obj.saved = True
+        #print(f"{self.agent_type_names[agent.a_type]} in {obj.save_by}")
+      #else:
+        #print(f"{self.agent_type_names[agent.a_type]} not in {obj.save_by}")
     self.rewards[agent.id]+=reward
     self.final_rewards+=reward/self.num_agents
-  
   # This is a static function so call sar_env.vectorize_state
   def vectorize_state(state,anum,radio=False):
     a1 = state['view'][anum].flatten()
@@ -873,12 +908,65 @@ class sar_env():
             state['radio']["message_legality"][anum].flatten(),
             state['radio']["queue_status"][anum].flatten(),
             state['radio']['sender'][0],
-            state['radio']['sender'][1]
+            state['radio']['sender'][1],
+            state['radio']['commanded_by'][anum]
           )
         )
     if not radio:
       a3 = np.zeros(a3.shape)
     return np.concatenate((a1,a2,a3)).astype(np.double)
+
+  def __com__(a, norm=False, invsq=False):
+    rc = int(a.shape[0]/2)
+    cc = int(a.shape[1]/2)
+    xcom = 0
+    ycom = 0
+    for r in range(a.shape[0]):
+      for c in range(a.shape[1]):
+        dy=a[r,c]*(r-rc)
+        dx=a[r,c]*(c-cc)
+        if invsq and r!=rc and c!=cc:
+          d = (r-rc)*(r-rc)+(c-cc)*(c-cc)
+          dy/=d
+          dx/=d
+        xcom+=dx
+        ycom+=dy
+    com = np.array([xcom,ycom])
+    if norm and np.sum(np.square(com))>0:
+      com/=np.sqrt(np.sum(np.square(com)))
+    return com
+
+  def boid_state(state,anum,radio=False):
+    a1 = np.concatenate((
+      sar_env.__com__(state['view'][anum,0], norm=False,invsq=True),
+      sar_env.__com__(state['view'][anum,1], norm=False,invsq=True),
+      -sar_env.__com__(state['view'][anum,2], norm=True,invsq=False)
+    ))
+    a2 = np.concatenate(
+          (
+            state['object_state'][anum]["a_state"].flatten(),
+            state['object_state'][anum]["s_state"].flatten(),
+            state['object_state'][anum]["p_state"].flatten(),
+          )
+        )
+    #a3 = state['memory'][anum].flatten()
+    a3 = np.concatenate(
+          (
+            state['radio']["message"].flatten(),
+            state['radio']["message_legality"][anum].flatten(),
+            state['radio']["queue_status"][anum].flatten(),
+            state['radio']['sender'][0],
+            state['radio']['sender'][1],
+            state['radio']['commanded_by'][anum]
+          )
+        )
+    if not radio:
+      a3 = np.zeros(a3.shape)
+    st = np.concatenate((a1,a2,a3)).astype(np.double)
+    #if anum == 0:
+    #  print(f"boid state for 0: \n{st}")
+    return st
+
 
   def random_action(self, max_instruction=5):
     mtype = np.zeros(8)
@@ -914,10 +1002,11 @@ if __name__ == "__main__":
     actions = np.zeros((len(agents),14+len(agents)))
     for i,a in enumerate(agents):
       #game.agents[i].brain_name ="hal"
-      if i == game.player:
-        actions[i,0:2] = controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
+      #if i == game.player:
+      actions[i,0:2] = controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
       #actions[i,2:] = np.random.random(12+len(agents))
     state, rewards, terminated, truncated, info = game.step(actions=actions)
+    #sar_env.boid_state(state, 0, True)
     #print(state['view'][0][2])
     #print(sar_env.vectorize_state(state,0,True).shape)
     #input()
