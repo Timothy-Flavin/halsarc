@@ -525,11 +525,13 @@ class sar_env():
               t_agent.p_state[a.poi,6] = 0
               # x,y,destroyed,saved,age,recency,saveable
               if a.p_state[a.poi,5] > t_agent.p_state[a.poi,5]:
-                t_agent.p_state[a.poi,0:2] = self.pois[a.poi].pos
+                t_agent.p_state[a.poi,0:3] = a.p_state[a.poi,0:3]
               for svb in self.pois[a.poi].save_by:
                 if self.agent_names[t_agent.a_type] == svb:
                   t_agent.p_state[a.poi,6] = 1
-                  
+        if mtp == 4:
+          for t_agent in self.agents:
+            t_agent.p_state[a.poi,3] = a.p_state[a.poi,3]
             #print(f"{a.name} said that {self.pois[a.poi].name} ({a.poi}) can be saved by {self.pois[a.poi].save_by}")
             #for t_agent in self.agents:
               #print(f"Resulting poi state: {t_agent.p_state}")
