@@ -64,8 +64,8 @@ class player_recorder():
                         poi_names=self.pois,
                         max_poi=3,
                         explore_multiplier=self.exp_reward,
-                        player=self.active_player
-                        )
+                        player=self.active_player,
+                        seed=time.time())
     state, info = self.game.start()
     terminated = False
     dirs = ['w','a','s','d','wd','ds','sa','aw','']
@@ -119,13 +119,19 @@ class player_recorder():
           else:
             actions[i,0:2] = self.player_controls(dir) # if not a player and no skmodel then do action ''
         
+        #print(actions)
         if not self.game.agents[self.active_player].destroyed or terminated or truncated:
+          #print(state['view'][self.active_player])
+          #print("----------------------------------------------------------")
           state_record.append(state)
 
-        state, rewards, terminated, truncated, info = self.game.step(actions=actions)
+        newstate, rewards, terminated, truncated, info = self.game.step(actions=actions)
         ##print(actions.shape)
         #print(actions[self.active_player].shape)
         #input()
+        #print(newstate['view'][2])
+        state = newstate
+        #print("----------------------------------------------------------")
         if not self.game.agents[self.active_player].destroyed or terminated or truncated:
           action_record.append(np.copy(info.actions[self.active_player]))
           reward_record.append(np.copy(rewards[self.active_player]))
@@ -167,6 +173,7 @@ class player_recorder():
     print(len(s))
     filehandler = open(f"{self.data_folder}{self.agents[self.active_player]}_state_record.pkl", 'wb') 
     pickle.dump(oldstate+state_record, filehandler)
+    np.save(f"{self.data_folder}{self.agents[self.active_player]}_anum.npy",np.array([self.active_player]))
 
 
 if __name__=="__main__":

@@ -17,7 +17,7 @@ import json
 from halsarc.Game.controllers import *
 # Set up the drawing window
 
-from searcher import searcher #halsarc.Game.
+from halsarc.Game.searcher import searcher #halsarc.Game.
 from halsarc.Game.poi import person_of_interest #halsarc.Game.
 from halsarc.Game.sol import sign_of_life
 from halsarc.Game.message import Message
@@ -1015,7 +1015,7 @@ if __name__ == "__main__":
     state, rewards, terminated, truncated, info = game.step(actions=actions)
     #print(state['object_state'][0])
     #sar_env.boid_state(state, 0, True)
-    #print(state['view'][0][2])
+    #print(state['view'][0])
     #print(sar_env.vectorize_state(state,0,True).shape)
     #input()
     rew += rewards
