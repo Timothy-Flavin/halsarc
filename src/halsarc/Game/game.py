@@ -360,6 +360,7 @@ class sar_env():
                poi_names=["Child","Child","Adult"], 
                player = -1,
                explore_multiplier=0.1,
+               random_start = True,
                seed=0):
     """
     Args:
@@ -382,6 +383,7 @@ class sar_env():
       seed: random seed used for spawning Agents and POI
     """
     random.seed(seed)
+    self.random_start = random_start
     self.player = player
     self.action_size = 14+max_agents
     self.explore_multiplier = explore_multiplier
@@ -476,6 +478,11 @@ class sar_env():
     self.signs_of_life = [None]*self.max_sol
     self.cur_sol = 0
     self.frame_num=0
+    if self.random_start:
+      self.start_pos = [random.randint(int(self.map_pixel_width*0.1),int(self.map_pixel_width*0.8)),
+                        random.randint(int(self.map_pixel_height*0.1),int(self.map_pixel_height*0.8))]
+    else:
+      self.start_pos = [200,200]
     self.__populate_agents__()
     self.__populate_poi__()
     self.__reset_radio__()

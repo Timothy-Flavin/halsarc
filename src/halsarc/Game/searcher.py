@@ -6,7 +6,7 @@ import math
 class searcher(entity):
   # Speed is how many times per frame the agent can move
   def __init__(self, agent_blueprint, a_num, name, num, a_type, game, game_instance):
-    entity.__init__(self, game, np.array([200,200],dtype=np.float32), 50, 5, entity_type="learnable_agent")
+    entity.__init__(self, game, np.array(game_instance.start_pos,dtype=np.float32), 50, 5, entity_type="learnable_agent")
     self.name = name+str(num)
     self.a_num = a_num
     self.a_type = a_type
