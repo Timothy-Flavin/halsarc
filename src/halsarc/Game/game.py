@@ -798,7 +798,7 @@ class sar_env():
           i.debug_render(color = i.color, screen = self.draw_surface)
       #pygame.draw.circle(screen, (0, 0, 255), (self.x, self.y), 75)
     #self.draw_surface.fill((255,255,255,100),special_flags=pygame.BLEND_RGBA_MULT)
-    self.__draw_buttons__()
+    #self.__draw_buttons__()
     self.__draw_messages__()
     self.screen.blit(self.draw_surface, (0,0))
     # Flip the display
@@ -945,9 +945,10 @@ class sar_env():
 
   def boid_state(state,anum,radio=False):
     a1 = np.concatenate((
-      sar_env.__com__(state['view'][anum,0], norm=False,invsq=True),
-      sar_env.__com__(state['view'][anum,1], norm=False,invsq=True),
-      -sar_env.__com__(state['view'][anum,2], norm=True,invsq=False)
+      sar_env.__com__(state['view'][anum,0], norm=True,invsq=True),
+      sar_env.__com__(state['view'][anum,1], norm=True,invsq=True),
+      -sar_env.__com__(state['view'][anum,2], norm=True,invsq=False),
+      np.array([0.5,0.5]) - state['object_state'][anum]['a_state'][0,0:2] 
     ))
     a2 = np.concatenate(
           (
@@ -998,13 +999,14 @@ if __name__ == "__main__":
   pois = ["Child", "Child", "Adult"]
   premade_map = np.load("../LevelGen/Island/Map.npy")
   game = sar_env(max_agents=3,display=True, tile_map=premade_map, 
-                 agent_names=agents, poi_names=pois,player=1,
+                 agent_names=agents, poi_names=pois,player=-1,
                  explore_multiplier=0.005)
   state, info = game.start()
   controller = player_controller(None)
   terminated = False
   #print(sar_env.vectorize_state(state,0,True).shape)
   rew = np.zeros(3)
+  np.set_printoptions(precision=2)
   while not terminated:
     actions = np.zeros((len(agents),14+len(agents)))
     for i,a in enumerate(agents):
@@ -1015,7 +1017,7 @@ if __name__ == "__main__":
     state, rewards, terminated, truncated, info = game.step(actions=actions)
     #print(state['object_state'][0])
     #sar_env.boid_state(state, 0, True)
-    #print(state['view'][0])
+    print(state['view'][0])
     #print(sar_env.vectorize_state(state,0,True).shape)
     #input()
     rew += rewards
