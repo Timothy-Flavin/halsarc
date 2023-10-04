@@ -11,12 +11,11 @@ class searcher(entity):
     self.a_num = a_num
     self.a_type = a_type
     self.poi=-1
+    self.save_target = -1
     # These next 4 will be instantiated by the game on start
     self.memory = np.zeros((game_instance.tile_map.shape[0], game_instance.tile_map.shape[1]))
-    self.a_state = np.zeros((game_instance.max_agents,6+game_instance.num_agent_types)) # x,y,dx,dy,alive,recency,[atype] one hot coded
-    self.p_state = np.zeros((game_instance.max_poi,7)) # x,y,destroyed,saved,age,recency,saveable
-    self.p_state[:,6] = 1
-    self.s_state = np.zeros((game_instance.max_sol,4)) # x,y,age,recency
+    self.a_state = np.zeros((game_instance.max_agents,4)) # x,y,dx,dy,alive,recency,[atype] one hot coded
+    self.p_state = np.zeros(3) # x,y,saveable
     self.command_accepted = False
     self.commanded = 0
     self.commanded_by = -1
@@ -91,8 +90,6 @@ class searcher(entity):
         adjust=0
         ia = 0#len(game_instance.agents)-1
       
-      #print(ia)
-      self.a_state[ia,5] *= 0.99
       if np.sum(np.square(self.pos - obj.pos)) < self.effective_view_range*self.effective_view_range:
         # x,y,alive,a_type one hot coded
         #self.a_state[ia] = np.zeros(game_instance.num_agent_types+6)
@@ -102,33 +99,15 @@ class searcher(entity):
           self.a_state[ia,2:4] = self.cur_action
         self.a_state[ia,0] = obj.pos[0]
         self.a_state[ia,1] = obj.pos[1]
-        self.a_state[ia,4] = 1-int(obj.destroyed)
-        self.a_state[ia,5] = 1.0
-        self.a_state[ia,obj.a_type+6] = 1
       else:
         self.a_state[ia,0] = self.a_state[ia,0] + self.a_state[ia,2]
         self.a_state[ia,1] = self.a_state[ia,1] + self.a_state[ia,3]
         self.a_state[ia,0] = max(min(self.a_state[ia,0], game_instance.map_pixel_width),0)
         self.a_state[ia,1] = max(min(self.a_state[ia,1], game_instance.map_pixel_height),0)
-        self.a_state[ia,4] = 1-int(obj.destroyed)
       #print(
       #  f"speed: {math.sqrt(self.a_state[ia,2]**2 + self.a_state[ia,3]**2)/(obj.speed*obj.speed_multiplier)} from mul: {(obj.speed*obj.speed_multiplier)}")
-    
-    # Sign of life memory
-    for i,sol in enumerate(game_instance.signs_of_life):
-      if sol is None:
-        continue
-      self.s_state[i,3]*=0.99
-      if np.sum(np.square(self.pos - sol.pos)) < self.effective_view_range*self.effective_view_range:
-        if sol.hidden:
-          game_instance.found(sol, self)
-          sol.hidden = False
-          self.legal_messages[1] = 1
-          #print(f"legal: {self.legal_messages}, name: {self.name}")
-        self.s_state[i] = [sol.pos[0],sol.pos[1],sol.time_active/100.0,1.0]
-    
+    #poi
     for i,poi in enumerate(game_instance.pois):
-      self.p_state[i,5]*=0.99
       if np.sum(np.square(self.pos - poi.pos)) < self.effective_view_range*self.effective_view_range:
         if not poi.saved:
           game_instance.found(poi, self)
@@ -138,15 +117,13 @@ class searcher(entity):
           if poi.saved:
             #print("Searcher knows saved")
             self.legal_messages[4] = 1
-            self.p_state[i,6] = 1
+            self.p_state = np.zeros(3)
             #input()
           else:
-            #print("Searcher knows not saved")
             self.legal_messages[3] = 1
-            self.p_state[i,6] = 0
-          # x,y,destroyed,saved,age,recency,saveable
-        self.p_state[i] = [poi.pos[0],poi.pos[1],int(poi.destroyed), int(poi.saved), poi.time_active/100.0,1,self.p_state[i,6]]
+            self.p_found = game_instance.norm_pos(poi.pos)
     #print(f"{self.name} pois: \n{self.p_state}")
+  
   def update(self, delta_time, game_instance):
     self.__handle_action__(game_instance)
     self.time_active+=1
@@ -157,7 +134,6 @@ class searcher(entity):
       self.destroy()
       return
     
-
   def render(self, color, screen, pov=None, debug=False):
     #if pov is not None:
      #print(f"agent {self.a_num} recency: {pov.a_state[pov.__i_adjust__(self.a_num),4]}")

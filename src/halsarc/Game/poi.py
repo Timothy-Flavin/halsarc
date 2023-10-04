@@ -14,6 +14,8 @@ class person_of_interest(entity):
     self.hidden = True
     self.saved = False
     self.p_num = p_num
+    self.dir = random.random()*2*math.pi
+    self.turn_bias = random.random()/4 - 1/8
 
     self.speed = float(poi_blueprint["speed"])
     self.active_time = int(poi_blueprint["active_time"]*100)
@@ -45,21 +47,23 @@ class person_of_interest(entity):
   def update(self, delta_time, game_instance):
     #print("poi update")
     #print(f"screen: {game_instance.screen}, tilemap: {game_instance.tile_map}")
-    self.sign_of_life(game_instance=game_instance)
+    #self.sign_of_life(game_instance=game_instance)
     row, col, self.tile = self.get_tile_from_pos(game_instance)
+    game_instance.trails[row,col] = 1
+    game_instance.trail_nums[row,col] = self.p_num
     self.time_active+=1
     if self.time_active>self.active_time and not self.saved:
       self.destroy()
       return
     self.altitude = self.tile['altitude']
     self.speed_multiplier = self.speeds[self.tile['name']]
-    dx=random.randint(-1,1)
-    dy=random.randint(-1,1)
-    temp = np.array([dx, dy], dtype="float32") + self.v
+    dx=math.cos(self.dir)
+    dy=math.sin(self.dir)
+    self.dir+=(random.random()-0.5)/2 +random.random()*self.turn_bias
+    temp = np.array([dx, dy], dtype="float32")
     if abs(temp[0])>0.001 or abs(temp[1])>0.001:
       temp/=np.linalg.norm(temp)
       self.cur_action = temp
-      self.v = temp
       if self.hidden:
         self.take_action(game_instance)
     return self.cur_action
