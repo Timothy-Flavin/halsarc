@@ -453,7 +453,7 @@ class sar_env():
       poi_name_ct[poiname] = poi_name_ct.get(poiname,0)+1
       self.pois.append(person_of_interest(poi, poiname+str(poi_name_ct[poiname]), i, pygame)) 
       self.add_entity(self.pois[-1])
-      self.pois[-1].pos = np.array([float(random.randint(100,self.map_pixel_width-100)), float(random.randint(100,self.map_pixel_height-100))], dtype=np.float32)
+      self.pois[-1].pos = np.array([float(random.randint(150,self.map_pixel_width-150)), float(random.randint(100,self.map_pixel_height-100))], dtype=np.float32)
       #print(f"pois : {self.pois[-1].pos}")
 
   def __reset_radio__(self):
@@ -488,8 +488,8 @@ class sar_env():
     self.cur_sol = 0
     self.frame_num=0
     if self.random_start:
-      self.start_pos = [random.randint(int(self.map_pixel_width*0.1),int(self.map_pixel_width*0.8)),
-                        random.randint(int(self.map_pixel_height*0.1),int(self.map_pixel_height*0.8))]
+      self.start_pos = [random.randint(int(self.map_pixel_width*0.2),int(self.map_pixel_width*0.8)),
+                        random.randint(int(self.map_pixel_height*0.2),int(self.map_pixel_height*0.8))]
     else:
       self.start_pos = [200,200]
     self.__populate_agents__()
@@ -657,18 +657,20 @@ class sar_env():
           if not agent.destroyed and (((r-tile_pos[0])*self.tile_width)**2 + ((c-tile_pos[1])*self.tile_width)**2 <= agent.effective_view_range**2):
             viewable[0,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.speeds[self.tiles[self.tile_map[r,c]]['name']]
             viewable[1,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.tiles[self.tile_map[r,c]]['altitude']#*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]
-            viewable[3,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.trails[r,c]
+            viewable[2,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = self.trails[r,c]
             self.rewards[agent.a_num]+=(1-agent.memory[r,c])*self.explore_multiplier
             agent.memory[r,c]=1
-          viewable[2,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.memory[r,c]#*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]
+          viewable[3,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = agent.memory[r,c]#*agent.visibilities[self.tiles[self.tile_map[r,c]]['name']]
         else:
-          viewable[0:4,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = -1
+          viewable[0:3,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = -1
+          viewable[3,r-tile_pos[0]+self.max_agent_view_dist, c-tile_pos[1]+self.max_agent_view_dist] = 2
     
     #self.rewards[agent.a_num] += (np.sum(agent.memory)-mem) / self.max_agent_view_dist / self.max_agent_view_dist * self.explore_multiplier
     return viewable, agent.memory
   
   def __get_viewable_objects__(self, a):
     a_s = np.copy(a.a_state)
+    #print(a_s)
     a_s[:,0] = a_s[:,0]/(self.map_pixel_width/2)-1
     a_s[:,1] = a_s[:,1]/(self.map_pixel_height/2)-1
 
@@ -779,8 +781,8 @@ class sar_env():
       b.render(self.draw_surface, a.legal_messages[i]>0)
 
   def __draw_messages__(self):
-    msg = Message(self, "Human1",random.randint(0,7),100,100,0,0,"Human",to=1,poi_id=1)
-    msg.render(self.my_font,self.draw_surface, self)
+    msg = Message(self, "Human1",random.randint(0,7),100,100,0,0,"Human",to=0,poi_id=0)
+    #msg.render(self.my_font,self.draw_surface, self)
 
   def draw_game(self):
     self.screen.fill((0,0,0,255))
@@ -844,6 +846,7 @@ class sar_env():
     if self.display:
       pygame.display.flip()
     #input()
+  
   def handle_mouse_event(self, event):
     if event.type == pygame.MOUSEMOTION:
       for b in self.buttons:
@@ -893,15 +896,15 @@ class sar_env():
       obj.hidden=False
     if obj.entity_type=="person_of_interest":
       if self.agent_type_names[agent.a_type] in obj.save_by:
-        np.set_printoptions(threshold=1000000)
-        print(f"found {obj.p_num} at {obj.pos}")
-        print(self.trail_nums)
-        print("-----------------------------------------------------------")
-        print(self.trails)
-        print("-----------------------------------------------------------")
+        #np.set_printoptions(threshold=1000000)
+        #print(f"found {obj.p_num} at {obj.pos}")
+        #print(self.trail_nums)
+        #print("-----------------------------------------------------------")
+        #print(self.trails)
+        #print("-----------------------------------------------------------")
         self.trails[self.trail_nums == obj.p_num] = 0
-        print(self.trails)
-        input()
+        #print(self.trails)
+        #input()
         reward += obj.saved_reward
         obj.saved = True
         #print(f"{self.agent_type_names[agent.a_type]} in {obj.save_by}")
@@ -922,8 +925,8 @@ class sar_env():
     a3 = np.concatenate(
           (
             #state['radio']["message"].flatten(),
-            state['radio']["message_legality"][anum].flatten(),
-            state['radio']["queue_status"][anum].flatten(),
+            #state['radio']["message_legality"][anum].flatten(),
+            #state['radio']["queue_status"][anum].flatten(),
             #state['radio']['sender'][0],
             #state['radio']['sender'][1],
             state['radio']['commanded_by'][anum]
@@ -934,9 +937,10 @@ class sar_env():
 
     v_state = np.concatenate((a1,a2,a3)).astype(np.double)
     return v_state
+  
   def vectorize_state(state,anum,radio=False):
-    st = sar_env.__concat_states__(state['view'][anum].flatten(),state,anum,radio)
-    print(f"Vectorize state shape: {st.shape}")
+    return sar_env.__concat_states__(state['view'][anum].flatten(),state,anum,radio)
+    #print(f"Vectorize state shape: {st.shape}")
  
   def __rc_to_small__(r,c,w):
     row=2
@@ -963,14 +967,14 @@ class sar_env():
       for c in range(state['view'][anum].shape[2]):
         view[:,sar_env.__rc_to_small__(r,c,state['view'][anum].shape[1])] += state['view'][anum][:,r,c]
     view/=vr/9
-    print(f"small view: ")
-    for i in range(4):
-      print(f"{view[i,0:3]}")
-      print(f"{view[i,3:6]}")
-      print(f"{view[i,6:9]}")
-      print()
+    #print(f"small view: ")
+    #for i in range(4):
+    #  print(f"{view[i,0:3]}")
+    #  print(f"{view[i,3:6]}")
+    #  print(f"{view[i,6:9]}")
+    #  print()
     st = sar_env.__concat_states__(view.flatten(),state,anum,radio)
-    print(f"vectorized state small actual size: {st.shape}")
+    #print(f"vectorized state small actual size: {st.shape}")
     return st
   
   def __com__(a, norm=False, invsq=False):
@@ -996,34 +1000,11 @@ class sar_env():
   def boid_state(state,anum,radio=False):
     a1 = np.concatenate((
       sar_env.__com__(state['view'][anum,0], norm=True,invsq=True),
-      sar_env.__com__(state['view'][anum,1], norm=True,invsq=True),
-      -sar_env.__com__(state['view'][anum,2], norm=True,invsq=False),
-      np.array([0.5,0.5]) - state['object_state'][anum]['a_state'][0,0:2] 
+      sar_env.__com__(state['view'][anum,1], norm=True,invsq=False),
+      sar_env.__com__(state['view'][anum,2], norm=True,invsq=False),
+      -sar_env.__com__(state['view'][anum,3], norm=True,invsq=False),
     ))
-    a2 = np.concatenate(
-          (
-            state['object_state'][anum]["a_state"].flatten(),
-            #state['object_state'][anum]["s_state"].flatten(),
-            state['object_state'][anum]["p_state"].flatten(),
-          )
-        )
-    #a3 = state['memory'][anum].flatten()
-    a3 = np.concatenate(
-          (
-            state['radio']["message"].flatten(),
-            state['radio']["message_legality"][anum].flatten(),
-            state['radio']["queue_status"][anum].flatten(),
-            state['radio']['sender'][0],
-            state['radio']['sender'][1],
-            state['radio']['commanded_by'][anum]
-          )
-        )
-    if not radio:
-      a3 = np.zeros(a3.shape)
-    st = np.concatenate((a1,a2)).astype(np.double)#,a3
-    #if anum == 0:
-    #  print(f"boid state for 0: \n{st}")
-    return st
+    return sar_env.__concat_states__(a1,state,anum,radio)
 
   def random_action(self, max_instruction=5):
     mtype = np.zeros(8)
@@ -1064,12 +1045,12 @@ if __name__ == "__main__":
       actions[i,0:2] = np.random.random(2)#controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
       #actions[i,2:] = np.random.random(12+len(agents))
     state, rewards, terminated, truncated, info = game.step(actions=actions)
-    print(state['view'][0])
+    #print(state['view'][0])
     #print(state['object_state'][0])
     #sar_env.boid_state(state, 0, True)
     sar_env.vectorize_state(state,0,True)
-    sv = sar_env.vectorize_state_small(state,0,True)
-    #print(f"small state: {sv[4*9:]}")
+    sv = sar_env.boid_state(state,0,True)
+    #print(f"small state: {sv}")
     #input()
     rew += rewards
     game.wait(100)

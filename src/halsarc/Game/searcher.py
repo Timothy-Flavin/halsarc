@@ -143,14 +143,14 @@ class searcher(entity):
       h = max(int(self.size/5),2)
       trect = self.game.Rect(self.pos[0]-self.size,self.pos[1]-self.size-h, int(self.size*2-self.size*2*self.time_active/self.active_time),h)
       self.game.draw.rect(screen, (0,100,250), trect)
-    elif pov.a_state[pov.__i_adjust__(self.a_num),4]>0:
+    else:# pov.a_state[pov.__i_adjust__(self.a_num),4]>0:
       
      #print(f"drawing {self.a_num} from pov: {pov.a_num} as {pov.__i_adjust__(self.a_num)}")
       x = float(pov.a_state[pov.__i_adjust__(self.a_num),0])
       y = float(pov.a_state[pov.__i_adjust__(self.a_num),1])
      #print(f"{pov.a_state[pov.__i_adjust__(self.a_num),4]:.2f} pos: [{self.pos[0]:.1f},{self.pos[1]:.1f}], memory: [{x:.1f},{y:.1f}]")
       self.game.draw.circle(screen, 
-                            np.array(color)*float(pov.a_state[pov.__i_adjust__(self.a_num),5]),
+                            np.array(color),#*float(pov.a_state[pov.__i_adjust__(self.a_num),5]),
                             center=(x,
                             y),
                             radius=self.size)
