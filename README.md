@@ -1,5 +1,6 @@
 # halsarc Heterogeneous Agents Learning Search and Rescue Communication 
-A group of agents is called a department and this repo is a MARL experiment using pygame to train some agents
+This project is intended to serve as a flexible engine for search-type tasks in multi-agent reinforcement learning.
+The api is broken down into sections for generating levels, defining agent and person of interest parameters, and finally the environment api and state encodings. 
 
 ## Level Gen
 ### File Structure
@@ -10,7 +11,7 @@ Every Level has 4 required files in order for the game to load and process them:
 This file describes the different kind of searhcing agents that can be drawn from when starting a level. These attributes are subject to change (mostly additions), but you will be notified if they are.
 ```
 {
-  "AgentName1": {
+  "AgentType1": {
     "view_range": number,      //radius of agent vision in number of tiles
     "speed": number,           //speed of agent, 1 is base
     "active_time": number,     // how much time an agent can stay active in "hours" 
@@ -25,17 +26,8 @@ This file describes the different kind of searhcing agents that can be drawn fro
       "peak":0.4,
       "shore": 1.0
     },
-    "visibilities":{            // Level of detail seen in different tiles
-      "grass":1.0,
-      "river":1.0,
-      "ocean":1.0,
-      "forest":0.8,
-      "mountain":1.0,
-      "peak":1.0,
-      "shore": 1.0
-    }
   },
-"AgentName2": ...
+"AgentType2": ...
 }
 ```
 
@@ -45,8 +37,8 @@ This file is used to describe the persons or points of interest in the world whi
 ```
 {
   "HiddenName1":{   
-    "speed":0.3,               // Speed that this entity moves
-    "active_time":10.0,        // time before this entity disappears forever
+    "speed":number,               // Speed that this entity moves
+    "active_time":number,        // time before this entity disappears forever
     "color":[200,180,80,255],  // color to be rendered after found
     "moves":"random",          // used to denote the kind of movement. Only random implemented so far
     "speeds": {                // Speed multipliers on different tiles
@@ -58,7 +50,6 @@ This file is used to describe the persons or points of interest in the world whi
       "peak":0.4,
       "shore": 1.0
     },
-    "camo":0.5                 // Difficulty to be spotted, this is weighed against the visibility modifiers of the agents
   },
   "HiddenName2": { ... }, ...
 }
@@ -99,24 +90,50 @@ The environment uses the PettingZoo API from FarmaFoundation. An Example of how 
 agents = ["Human","RoboDog","Drone"]   # Agents list by name which will participate
 pois = ["Child", "Child", "Adult"]     # hidden entities by name
 premade_map = np.load("../LevelGen/Island/Map.npy")
-game = sar_env(display=True, tile_map=premade_map, agent_names=agents, poi_names=pois)
-state, info = game.start()             # Get initial state and game instance to choose actions
+max_agents = 3 # this should be >= len(agents)
+
+env = sar_env(max_agents=max_agents,display=True, tile_map=premade_map, agent_names=agents, poi_names=pois,seed=random.randint(0,10000),player=player_num,explore_multiplier=0.1)
+state, info = env.start()             # Get initial state and game instance to choose actions
+
+# The environment comes with three methods of vectorizing the state in order of decreasing complexity
+state_sizes = [env.vec_state_size, self.vec_state_small_size, self.boid_state_size] 
 controller = player_controller(None)   # Can be whatever you want it to be. This one does keyboard events
 terminated = False
 
 while not terminated:
-  actions = np.zeros((len(agents),2))
-  messages = np.zeros((len(agents),2)) # In Progress implementation
+  actions = np.zeros((len(agents),14+max_agents))
   for i,a in enumerate(agents):
-    actions[i] = controller.choose_action(state=state, game_instance=game)
-  state, rewards, terminated, truncated, info =game.step(actions=actions, messages=messages)
+    actions[i,:2] = controller.choose_action(state=state, game_instance=env)
+  state, rewards, terminated, truncated, info = env.step(actions=actions)
 ```
 
-### Actions Shape
-Right now, the only actions are x and y direction magnitudes so the actions array is `[len(agents),2]`. This will change if more actions such as resting are added. messages are not yet defined. The state comes in two parts, the map part and the object part. 
+### Actions Encoding
+
+Agents can move and attempt to send messages on the radio. Movement is decided by the first two actions and whether
+a message send is attempted is decided by the third action taken as a boolean value. The type of message is one of 
+8 available message types: 
+SoS, Sign of life found, PoI found, PoI needs X, Target saved, Roger, I want to go, You should go. Most messages are
+broadcast, but for some applicablt messages a target is given. Commands may be followed using the Roger message type.
+
+```
+[
+  0 xdir:float, # from -1 to 1 how much to move in the x direction
+  1 ydir:float, # from -1 to 1 how much to move in the y direction
+  2 message:boolean, # 0 to 1, if greater 0.5 means a message send will be attempted 
+  3 xcommanddir, # if commanding another agent, this is the x direction used
+  4 ycommanddir, # this is the y direction used
+  5 magnitude:float, # this is for how many frames the command will stick rounded down
+  6:14 one_hot_message_type, # argmax of (this dot legal messages) will decide the message type
+  14:14+max_agents one_hot_target # the argmax of this will be the target of the message if applicable
+]
+```
+
+### State vectorization
+
+#### Radio state
 
 #### Map Part
-The map part consists of a grid for each agent with two channels of size `H = W = 2*max_effective_view_range + 1` where each grid is centered at it's agent. The max effective view range is the farthest that any of the agents could possibly see. For grounded agents this means the agent with the highest view range on the highest altitude tile. The channels are static and dynamic where static is tile id and dynamic is whether or not the tile has an ongoing event such as fire. For now dynamic is always zero. The final shape of this part is then `[num_agents, W, H, 2]`. 
+The map part consists of a grid for each agent with two channels of size `H = W = 2*max_effective_view_range + 1` where each grid is centered at it's agent. The max effective view range is the farthest that any of the agents could possibly see. For grounded agents this means the agent with the highest view range on the highest altitude tile. The channels are static and dynamic where static is tile id and dynamic is whether or not the tile has an ongoing event such as fire. For now dynamic is always zero. The final shape of this part is then `[num_agents, 3, W, H]`. The 3 refers to the 3 channels the agent can see. The first is altitude of the local tiles, the second is movespeed multipliers for the nearest tyles, and the last is a layer where PoI's leave tracks where each tile measures recency.  
 
 #### Object Part
 The object part of the state comes as an array `[num_agents, num_objects, 4]` 
