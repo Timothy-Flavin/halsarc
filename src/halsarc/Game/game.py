@@ -1162,7 +1162,7 @@ if __name__ == "__main__":
           actions[i,2] = 1
           actions[i,11]= 1
           actions[i,14+game.player] = 1
-          print("did the thing")
+          #print("did the thing")
         else:
           actions[i,2] = 0
           actions[i,11]= 0

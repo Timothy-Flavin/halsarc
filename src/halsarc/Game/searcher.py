@@ -20,8 +20,8 @@ class searcher(entity):
     self.commanded = np.zeros(game_instance.max_agents)# How many frames are left in the command
     self.commanded_by = np.zeros(game_instance.max_agents) # who has given us commands
     self.command_dir = np.zeros((game_instance.max_agents,2)) # where we goin
-    print(self.commanded)
-    print("\n\n\n")
+    #print(self.commanded)
+    #print("\n\n\n")
     #self.command_frame = 2**31-1 # 
     #self.message_state = np.zeros(3) # sent, denied, not attempted
     self.brain_name = "vpg"
