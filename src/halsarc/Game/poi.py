@@ -9,8 +9,8 @@ class person_of_interest(entity):
   def __init__(self, poi_blueprint, name, p_num, game):
     entity.__init__(self, game, np.array([300,300],dtype=np.float32), 50, 5, entity_type="person_of_interest")
     self.name = name
-    self.found_reward = 1
-    self.saved_reward = 1
+    self.found_reward = 10
+    self.saved_reward = 15
     self.hidden = True
     self.saved = False
     self.p_num = p_num
@@ -75,9 +75,9 @@ class person_of_interest(entity):
       trect = self.game.Rect(self.pos[0]-self.size,self.pos[1]-self.size-h, int(self.size*2-self.size*2*self.time_active/self.active_time),h)
       self.game.draw.rect(screen, (0,100,250), trect)
     elif pov is not None and pov.save_target == self.p_num:
-      self.game.draw.circle(screen, np.array(color), center=(float(pov.p_state[self.p_num,0]), float(pov.p_state[self.p_num,1])), radius=self.size)#*pov.p_state[self.p_num,5]
+      self.game.draw.circle(screen, np.array(color), center=(float(pov.p_state[0]), float(pov.p_state[1])), radius=self.size)#*pov.p_state[self.p_num,5]
       h = max(int(self.size/5),2)
-      trect = self.game.Rect(pov.p_state[self.p_num,0]-self.size,pov.p_state[self.p_num,1]-self.size-h, int(self.size*2-self.size*2*self.time_active/self.active_time),h)
+      trect = self.game.Rect(pov.p_state[0]-self.size,pov.p_state[1]-self.size-h, int(self.size*2-self.size*2*self.time_active/self.active_time),h)
       self.game.draw.rect(screen, (0,100,250), trect)
   def debug_render(self, color, screen, debug=False):
     #print("debug render")

@@ -397,7 +397,7 @@ class sar_env():
     self.reset()
     self.commanded_size = max_agents + len(self.agent_types)+2
 
-    self.msg_state_size = 2 + 3 + 8
+    self.msg_state_size = 2 #+ 3 + 8 #queue status and legality
     self.vec_state_size = 4*self.max_agents + 3 + math.pow((2*self.max_agent_view_dist+1),2)*4 + self.msg_state_size
     self.vec_state_small_size = 4*self.max_agents + 3 + 9*4 + self.msg_state_size
     self.boid_state_size = 4*self.max_agents + 3 + 8 + self.msg_state_size
@@ -517,6 +517,7 @@ class sar_env():
         self.agents[m].message_state = np.array([0,1,0])
         continue
       self.agents[m].message_state = np.array([1,0,0])
+      #print("sup")
       a = self.agents[m]
       mtp = np.argmax(messages[m,6:14]*a.legal_messages)
       act = messages[m,3:5]
@@ -782,7 +783,7 @@ class sar_env():
 
   def __draw_messages__(self):
     msg = Message(self, "Human1",random.randint(0,7),100,100,0,0,"Human",to=0,poi_id=0)
-    #msg.render(self.my_font,self.draw_surface, self)
+    msg.render(self.my_font,self.draw_surface, self)
 
   def draw_game(self):
     self.screen.fill((0,0,0,255))
@@ -911,7 +912,7 @@ class sar_env():
       #else:
         #print(f"{self.agent_type_names[agent.a_type]} not in {obj.save_by}")
     self.rewards[agent.id]+=reward
-    self.final_rewards+=reward/self.num_agents
+    self.final_rewards+=reward/2
   # This is a static function so call sar_env.vectorize_state
   def __concat_states__(view,state,anum,radio=False):
     a1 = view
@@ -921,21 +922,23 @@ class sar_env():
             state['object_state'][anum]["p_state"].flatten(),
           )
         )
-    #a3 = state['memory'][anum].flatten()
-    a3 = np.concatenate(
-          (
+    #cat = (
             #state['radio']["message"].flatten(),
             #state['radio']["message_legality"][anum].flatten(),
             #state['radio']["queue_status"][anum].flatten(),
             #state['radio']['sender'][0],
             #state['radio']['sender'][1],
-            state['radio']['commanded_by'][anum]
-          )
-        )
+            #state['radio']['commanded_by'][anum]
+          #)
+    #a3 = state['memory'][anum].flatten()
+    a3 = state['radio']['commanded_by'][anum] #np.concatenate(
+          #cat
+        #)
     if not radio:
       a3 = np.zeros(a3.shape)
 
     v_state = np.concatenate((a1,a2,a3)).astype(np.double)
+    #print(f"Vstate shape from game: {v_state.shape}")
     return v_state
   
   def vectorize_state(state,anum,radio=False):
@@ -1048,10 +1051,11 @@ if __name__ == "__main__":
     #print(state['view'][0])
     #print(state['object_state'][0])
     #sar_env.boid_state(state, 0, True)
-    sar_env.vectorize_state(state,0,True)
-    sv = sar_env.boid_state(state,0,True)
+    print(sar_env.vectorize_state(state,0,True).shape)
+    print(sar_env.vectorize_state_small(state,0,True).shape)
+    print(sar_env.boid_state(state,0,True).shape)
     #print(f"small state: {sv}")
-    #input()
+    input()
     rew += rewards
     game.wait(100)
   print(rew)

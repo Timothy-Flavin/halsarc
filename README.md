@@ -2,7 +2,10 @@
 This project is intended to serve as a flexible engine for search-type tasks in multi-agent reinforcement learning.
 The api is broken down into sections for generating levels, defining agent and person of interest parameters, and finally the environment api and state encodings. 
 
-## Level Gen
+# Instalation 
+
+```pip install -i https://test.pypi.org/simple/ halsarc```
+
 ### File Structure
 
 Every Level has 4 required files in order for the game to load and process them: **Agents.json**, **POI.json**, **Map.npy**, and **Tiles.json**.
@@ -78,8 +81,8 @@ This file describes the kinds of tiles which are present in the level. Each tile
 ]
 ```
 
-### Generating a level from scratch
-By Running PngToMap.py and supplying a level folder with a map.png present, a map will be generated in the form of a numpy array of tile id's for the game to use.
+### Generating map.npy from scratch
+By Running PngToMap.py and supplying a level folder with a map.png present, a map will be generated in the form of a numpy array of tile id's for the game to use. 
 Just change the `level_name="Island"` to the folder you create
 
 ## Game use
@@ -133,7 +136,7 @@ broadcast, but for some applicablt messages a target is given. Commands may be f
 #### Radio state
 
 #### Map Part
-The map part consists of a grid for each agent with two channels of size `H = W = 2*max_effective_view_range + 1` where each grid is centered at it's agent. The max effective view range is the farthest that any of the agents could possibly see. For grounded agents this means the agent with the highest view range on the highest altitude tile. The channels are static and dynamic where static is tile id and dynamic is whether or not the tile has an ongoing event such as fire. For now dynamic is always zero. The final shape of this part is then `[num_agents, 3, W, H]`. The 3 refers to the 3 channels the agent can see. The first is altitude of the local tiles, the second is movespeed multipliers for the nearest tyles, and the last is a layer where PoI's leave tracks where each tile measures recency.  
+The map part consists of a grid for each agent with two channels of size `H = W = 2*max_effective_view_range + 1` where each grid is centered at it's agent. The max effective view range is the farthest that any of the agents could possibly see. For grounded agents this means the agent with the highest view range on the highest altitude tile. The channels are static and dynamic where static is tile id and dynamic is whether or not the tile has an ongoing event such as fire. For now dynamic is always zero. The final shape of this part is then `[num_agents, 4, W, H]`. The 4 refers to the 3 channels the agent can see. The first is altitude of the local tiles, the second is movespeed multipliers for the nearest tyles, and the last is a layer where PoI's leave tracks where each tile measures recency.  
 
 #### Object Part
 The object part of the state comes as an array `[num_agents, num_objects, 4]` 

@@ -10,7 +10,7 @@
     "name": "river",
     "color": [100,100,255,255],
     "flammable": false,
-    "altitude": 0.8,
+    "altitude": 0.7,
     "cover":0.0
   },
   {
@@ -45,7 +45,7 @@
     "name": "forest",
     "color": [0,124,0,255],
     "flammable": true,
-    "altitude": 1.0,
+    "altitude": 0.9,
     "cover":0.0
   }
 ]
