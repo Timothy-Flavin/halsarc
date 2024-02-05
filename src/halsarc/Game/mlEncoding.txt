@@ -29,9 +29,16 @@ State:
       "a_state": float [max_agents,6+num_agent_types], 
       "s_state": float [x,y,age,recency], 
       "p_state": float [x,y,destroyed,saved,age,recency]
-    }
-  #"memory": [num_agents] [height,width,2],
-  "radio":
+    },
+  "listened":listened,"view_ranges":view_ranges}
+  "legal_messages": Shape(num_agents,8)[
+       
+  ],
+  "pending_commands": Shape(num_agents,num_agents)[
+    [1,0,0],
+    [0,1,1],
+    [0,0,1]
+  ] # row agent is being commanded by col agent if 1 so agent 1 is being commanded by itself and 2
   {
     "message": [
       0 x_location,
@@ -52,10 +59,8 @@ State:
       num_agents,
       3 (message sent, message denied, message not tried)
     ]
-    "legal_messages":[
-      num_agents,
-      8 (1's are legal 0s are not)
-    ]
+    
+
   }
 }
 

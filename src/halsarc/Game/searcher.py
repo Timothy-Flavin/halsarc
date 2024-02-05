@@ -16,12 +16,14 @@ class searcher(entity):
     self.memory = np.zeros((game_instance.tile_map.shape[0], game_instance.tile_map.shape[1]))
     self.a_state = np.zeros((game_instance.max_agents,4)) # x,y,dx,dy,alive,recency,[atype] one hot coded
     self.p_state = np.zeros(3) # x,y,saveable
-    self.command_accepted = False
-    self.commanded = 0
-    self.commanded_by = -1
-    self.command_dir = np.zeros(2)
-    self.command_frame = 2**31-1
-    self.message_state = np.zeros(3) # sent, denied, not attempted
+    self.command_accepted = -1 # who are we listening to rn
+    self.commanded = np.zeros(game_instance.max_agents)# How many frames are left in the command
+    self.commanded_by = np.zeros(game_instance.max_agents) # who has given us commands
+    self.command_dir = np.zeros((game_instance.max_agents,2)) # where we goin
+    print(self.commanded)
+    print("\n\n\n")
+    #self.command_frame = 2**31-1 # 
+    #self.message_state = np.zeros(3) # sent, denied, not attempted
     self.brain_name = "vpg"
     
     self.view_range = agent_blueprint["view_range"]
@@ -50,14 +52,16 @@ class searcher(entity):
       self.visibilities[k] = agent_blueprint["visibilities"][k]
 
   def __handle_action__(self, game_instance):
-    if self.command_accepted and \
-    self.commanded>0 and \
-    self.command_frame <= game_instance.frame_num:
-      self.cur_action = self.command_dir
-      self.commanded -= 1
-    if self.commanded <= 0:
-      self.command_accepted = False
-      self.commanded_by = -1
+    if self.command_accepted>-1 and \
+    self.commanded[self.command_accepted]>0: # and \ # If we have frames left in the command
+      self.cur_action = self.command_dir[self.command_accepted] # direction of the command we got
+      self.commanded[self.command_accepted] -= 1
+    if self.commanded[self.command_accepted] <= 0: # once the command is over, reset the command slot
+      self.command_accepted = -1
+      self.commanded[self.command_accepted] = 0# How many frames are left in the command
+      self.commanded_by[self.command_accepted] = 0 # who has given us commands
+      self.command_dir[self.command_accepted] = np.zeros(2) 
+      
     self.take_action(game_instance)
     self.pos[0] = max(min(self.pos[0],game_instance.map_pixel_width-0.01),0)
     self.pos[1] = max(min(self.pos[1],game_instance.map_pixel_height-0.01),0)
@@ -136,8 +140,8 @@ class searcher(entity):
     
   def render(self, color, screen, pov=None, debug=False):
     #if pov is not None:
-     #print(f"agent {self.a_num} recency: {pov.a_state[pov.__i_adjust__(self.a_num),4]}")
-     #print(self.destroyed)
+      #print(f"agent {self.a_num} recency: {pov.a_state[pov.__i_adjust__(self.a_num),4]}")
+      #print(self.destroyed)
     if pov is None:
       self.game.draw.circle(screen, color, center=(float(self.pos[0]), float(self.pos[1])), radius=self.size)
       h = max(int(self.size/5),2)

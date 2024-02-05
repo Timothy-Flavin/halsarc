@@ -55,13 +55,13 @@ class Message():
 
   def to_string(self):
     encodings = [
-      f" SoS! ",
-      f" Sign of Life found!",
-      f" Found {self.game_instance.pois[self.poi_id].name}",
+      f" SoS! ", # 0 
+      f" Sign of Life found!",# 1
+      f" Found {self.game_instance.pois[self.poi_id].name}",# 2
       f" {self.game_instance.pois[self.poi_id].name} Needs {self.game_instance.pois[self.poi_id].save_by}",
-      f" Target Saved: {self.game_instance.pois[self.poi_id].name}",
-      f" Roger",
-      f" I want to go {self.magnitude:.2f} {self.dir_to_cardinal(self.dx,self.dy)} <{self.dx:.2f} {self.dy:.2f}>",
+      f" Target Saved: {self.game_instance.pois[self.poi_id].name}", # 4
+      f" Roger: {self.to}", # 5
+      f" I'm going ' {self.magnitude:.2f} {self.dir_to_cardinal(self.dx,self.dy)} <{self.dx:.2f} {self.dy:.2f}>",
       f" {self.to} Should go {self.magnitude:.2f} {self.dir_to_cardinal(self.dx,self.dy)} <{self.dx:.2f},{self.dy:.2f}>"
     ]
     return f"{self.name} ({self.brain_type}) [{int(self.x)}, {int(self.y)}]: "+encodings[self.m_type]

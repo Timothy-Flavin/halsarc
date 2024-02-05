@@ -17,10 +17,10 @@ import json
 from halsarc.Game.controllers import *
 # Set up the drawing window
 
-from halsarc.Game.searcher import searcher #halsarc.Game.
-from halsarc.Game.poi import person_of_interest #halsarc.Game.
-from halsarc.Game.sol import sign_of_life
-from halsarc.Game.message import Message
+from searcher import searcher #halsarc.Game.
+from poi import person_of_interest #halsarc.Game.
+from sol import sign_of_life #halsarc.Game.
+from message import Message #halsarc.Game.
 
 class Button():
   def __init__(self, callback, x, y, text, font, w=None, h=None, color=[200,200,250], text_color=[255,255,255], hover_color=None, image=None, args=None):
@@ -206,12 +206,12 @@ class sar_env():
     al = np.zeros(len(self.agents))
     al[agent]=1
     self.actions[self.player,14:] = al
-    if self.agents[agent].commanded <=0:
-      self.agents[agent].commanded_by = self.player
-      self.agents[agent].command_accepted = True
-      self.agents[agent].commanded = 5
-      self.agents[agent].command_dir = dirs[self.bnum]
-      self.agents[agent].command_frame = self.frame_num
+    if self.agents[agent].commanded[self.player] <=0:
+      self.agents[agent].commanded_by[self.player] = 1
+      #self.agents[agent].command_accepted = self.player
+      self.agents[agent].commanded[self.player] = 5
+      self.agents[agent].command_dir[self.player] = dirs[self.bnum]
+      #self.agents[agent].command_frame = self.frame_num
 
   def __roger_button__(self,button):
     self.__general_button__(button, 5)
@@ -387,7 +387,7 @@ class sar_env():
     self.player = player
     self.action_size = 14+max_agents
     self.explore_multiplier = explore_multiplier
-    self.radio = {"1":1}
+    self.radio = []#{"1":1}
     self.__set_max_entities__(agent_names, poi_names, max_agents, max_poi, max_sol)
     self.__load_agents_tiles__(level_dir, level_name)
     self.__setup_screen__(tile_map, display)
@@ -457,7 +457,8 @@ class sar_env():
       #print(f"pois : {self.pois[-1].pos}")
 
   def __reset_radio__(self):
-    self.radio = {
+    self.radio = []
+    r = {
         "message": 
         np.zeros((14+self.max_agents+len(self.agent_types))),
         "sender":[
@@ -467,12 +468,12 @@ class sar_env():
         ],
         "queue_status":[],
         "message_legality":[]
-      } 
-    for i,a in enumerate(self.agents):
-      self.radio['queue_status'].append([0,0,1])
-      self.radio['message_legality'].append([0,0,0,0,0,0,1,1])
-    self.radio['queue_status'] = np.array(self.radio['queue_status'])
-    self.radio['message_legality'] = np.array(self.radio['message_legality'])
+      }
+    #for i,a in enumerate(self.agents):
+      #self.radio[0]['queue_status'].append([0,0,1])
+      #self.radio[0]['message_legality'].append([0,0,0,0,0,0,1,1])
+    #self.radio[0]['queue_status'] = np.array(self.radio['queue_status'])
+    #self.radio[0]['message_legality'] = np.array(self.radio['message_legality'])
     
   def reset(self):
     self.__reset_state_constants__()
@@ -504,7 +505,7 @@ class sar_env():
         self.handle_key_press(event)
         self.handle_mouse_event(event)
 
-  def __chatter__(self, messages):
+  def __chatter_old__(self, messages):
     rng = np.arange(0,len(self.agents),1)
     np.random.shuffle(rng)
     sent = False
@@ -612,6 +613,117 @@ class sar_env():
         "commanded_by":[],
       } 
 
+  def __chatter__(self, messages):
+    sent = False
+    message_listening = np.zeros((len(self.agents),len(self.agents)))
+    for m in range(len(messages)):
+      # if this agent does not want to send a message then dont
+      if messages[m,2] < 0.5:
+        self.radio.append(None)
+        continue
+      # Gets the biggest legal message type
+      a = self.agents[m]
+      mtp = np.argmax(messages[m,6:14]*a.legal_messages)
+      
+      # The agent's movement action
+      act = messages[m,3:5]
+      msg = Message(
+        game=self,
+        name=self.agents[m].name,
+        m_type=mtp,
+        x=a.pos[0],
+        y=a.pos[1],
+        dx=act[0],
+        dy=act[1],
+        agent_type=a.a_num,
+        brain_type=a.brain_name,
+        to=self.agents[np.argmax(messages[m,14:14+len(self.agents)])].name,
+        poi_id=a.poi,
+        magnitude=messages[m,5]
+      )
+      msg.__send__()
+      if mtp <6: # this makes it so messages can only be sent the once
+        #print("sent so illegal")
+        a.legal_messages[mtp]=0
+        if mtp == 2 or mtp == 3:
+          if mtp == 3:
+            for t_agent in self.agents:
+              # x,y,saveable
+              for svb in self.pois[a.poi].save_by:
+                if self.agent_names[t_agent.a_type] == svb:
+                  t_agent.p_state[2] = 1
+                  t_agent.p_state[0:2] = self.norm_pos(self.pois[a.poi].pos)
+                  t_agent.save_target = a.poi
+        if mtp == 4:
+          for t_agent in self.agents:
+            if t_agent.save_target == a.poi: # if this thing is saved then return the poi info to 0
+              t_agent.p_state = np.zeros(3)
+              t_agent.save_target = -1
+          a.poi = -1
+        if mtp == 5 and np.sum(a.commanded_by) > 0:
+          a.commanded_by[m] = 1 # let it choose itself
+          a.command_accepted = np.argmax(messages[m,14:14+len(self.agents)]*a.commanded_by)
+          message_listening[m,a.command_accepted] = 1 # this one got listened to
+          for commanders in range(len(self.agents)):
+            if commanders==a.command_accepted:
+              continue
+            if a.commanded_by[commanders]>0: #anyone who got ignored
+              message_listening[m,commanders] = -1
+            a.commanded_by[commanders] = 0
+            a.command_dir[commanders] = np.zeros(2)
+            a.commanded[commanders] = 0
+          if a.command_accepted == m: # if we accepted our own command, just listen to the policy
+            a.command_accepted = - 1
+          a.commanded_by[0] = 0 # should be zero so we only send an update signal if there was a choice
+            
+        
+      if mtp == 7:
+        targ = np.argmax(messages[m,14:14+len(self.agents)])
+        self.agents[targ].legal_messages[5]=1
+        self.agents[targ].commanded_by[a.a_num]= 1
+        if self.agents[targ].command_accepted != a.a_num: # can update the command but not duration
+          self.agents[targ].commanded[a.a_num] = messages[m,5]
+        self.agents[targ].command_dir[a.a_num] = messages[m,3:5]
+
+      for i,ag in enumerate(self.agents):
+       #print(f"agent[{i}] updates {ag.__i_adjust__(m)}")
+        if True: #Can use radio TODO
+          ag.a_state[ag.__i_adjust__(m),0] = a.pos[0]
+          ag.a_state[ag.__i_adjust__(m),1] = a.pos[1]
+          ag.a_state[ag.__i_adjust__(m),2] = 0
+          ag.a_state[ag.__i_adjust__(m),3] = 0
+          if mtp == 6:
+            ag.a_state[ag.__i_adjust__(m),2] = act[0]
+            ag.a_state[ag.__i_adjust__(m),3] = act[1]
+      #input()
+      atp = np.zeros(self.num_agent_types)
+      atp[a.a_type] = 1 
+      target = np.zeros(self.max_agents)
+      target[a.a_num] = 1
+      self.radio.append({
+        "message": 
+        np.concatenate(
+          (
+            np.array([
+            a.pos[0]/self.map_pixel_width,
+            a.pos[1]/self.map_pixel_height,
+            act[0], 
+            act[1],
+            messages[m,5]
+            ]), 
+            messages[m,6:15],
+            target,
+            atp
+          )
+        ),
+        "sender":[
+          np.zeros(self.max_agents),
+          np.zeros(len(self.agent_types)),
+          self.agents[m].brain_name
+        ],
+        "listened":message_listening,
+      })
+
   def __update_memory__(self):
     self.trails *= 0.98
     for a in self.agents:  
@@ -683,36 +795,34 @@ class sar_env():
     return {"a_state": a_s, "p_state":p_s}
   
   def __get_commanded_state__(self,a):
-    #commander_type = np.zeros(len(self.agent_types))
-    #commander = np.zeros(self.max_agents)
-    command_xy = np.zeros(2)
-    if a.commanded_by >-1:
-      command_xy = a.command_dir
-    return command_xy
+    #print(f"Shapes {a.commanded_by.shape},{a.commanded.shape},{a.command_dir.shape}")
+    cstate = np.concatenate([np.expand_dims(a.commanded_by,axis=1),
+                     np.expand_dims(a.commanded,axis=1),
+                     a.command_dir],1)
+    #print(cstate)
+    return cstate
 
   def __make_state__(self):
     map_state = np.zeros((len(self.agents),4,int(self.max_agent_view_dist*2+1),int(self.max_agent_view_dist*2+1)))#single channel no fire
     object_state = []
-    self.radio['queue_status'] = []
-    self.radio['message_legality'] = []
-    self.radio['commanded_by'] = []
     memory=np.zeros((len(self.agents),self.tile_map.shape[0],self.tile_map.shape[1],2))
     view_ranges = []
+    self.legal_messages=np.zeros((len(self.agents),8))
+    self.pending_commands=np.zeros((len(self.agents),len(self.agents),4))
+    listened = np.zeros((len(self.agents),len(self.agents)))
     for i,a in enumerate(self.agents):
       tiles, agent_memory = self.__get_viewable_tiles__(a)
       map_state[i, :, :] = tiles
-      #map_state[i,:,:,1] = self.__get_dynamic_map__(a)
       object_state.append(self.__get_viewable_objects__(a))
-      #memory[i,:,:,0]=agent_memory
-      #memory[i,:,:,1]=self.tile_map
-      self.radio['queue_status'].append(a.message_state)
-      self.radio['message_legality'].append(a.legal_messages)
-      self.radio['commanded_by'].append(self.__get_commanded_state__(a))
+      self.legal_messages[i]=(a.legal_messages)
+      self.pending_commands[i] = self.__get_commanded_state__(a)
+      if len(self.radio)>0 and self.radio[i] is not None:
+        listened+=self.radio[i]['listened'].T #transpose so it aligns with the other state vars
       view_ranges.append(a.effective_view_range)
-    state = {"view":map_state,"object_state":object_state,"radio":self.radio,"view_ranges":view_ranges}
-    #print(sar_env.vectorize_state(state,0,True).shape)
-    return  state# "memory":np.array(memory),
-
+    #print(listened)
+    state = {"view":map_state,"object_state":object_state,"legal_messages":self.legal_messages,"pending_commands":self.pending_commands,"listened":listened,"view_ranges":view_ranges}
+    return  state
+  
   def norm_pos(self,pos):
     return np.array([pos[0]/self.map_pixel_width*2,pos[1]/self.map_pixel_height*2])-1
 
@@ -1032,7 +1142,7 @@ if __name__ == "__main__":
   pois = ["Child", "Child", "Adult"]
   premade_map = np.load("../LevelGen/Island/Map.npy")
   game = sar_env(max_agents=3,display=True, tile_map=premade_map, 
-                 agent_names=agents, poi_names=pois,player=-1,
+                 agent_names=agents, poi_names=pois,player=1,
                  explore_multiplier=0.005, seed=random.randint(0,1000))
   state, info = game.start()
   controller = player_controller(None)
@@ -1044,18 +1154,30 @@ if __name__ == "__main__":
     actions = np.zeros((len(agents),14+len(agents)))
     for i,a in enumerate(agents):
       #game.agents[i].brain_name ="hal"
-      #if i == game.player:
-      actions[i,0:2] = np.random.random(2)#controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
+      if i == game.player:
+        actions[i,0:2] = controller.choose_action(state=state, game_instance=game)#np.random.random(2)*2-0.5#
+      else:
+        actions[i,0:2] = np.random.random(2)#
+        if state['pending_commands'][i,game.player,0]>0:
+          actions[i,2] = 1
+          actions[i,11]= 1
+          actions[i,14+game.player] = 1
+          print("did the thing")
+        else:
+          actions[i,2] = 0
+          actions[i,11]= 0
+          actions[i,14+game.player] = 0
+
       #actions[i,2:] = np.random.random(12+len(agents))
     state, rewards, terminated, truncated, info = game.step(actions=actions)
     #print(state['view'][0])
     #print(state['object_state'][0])
     #sar_env.boid_state(state, 0, True)
-    print(sar_env.vectorize_state(state,0,True).shape)
-    print(sar_env.vectorize_state_small(state,0,True).shape)
-    print(sar_env.boid_state(state,0,True).shape)
+    #print(sar_env.vectorize_state(state,0,True).shape)
+    #print(sar_env.vectorize_state_small(state,0,True).shape)
+    #print(sar_env.boid_state(state,0,True).shape)
     #print(f"small state: {sv}")
-    input()
+    #input()
     rew += rewards
     game.wait(100)
   print(rew)
