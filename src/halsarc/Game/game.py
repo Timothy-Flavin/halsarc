@@ -17,10 +17,10 @@ import json
 from halsarc.Game.controllers import *
 # Set up the drawing window
 
-from searcher import searcher #halsarc.Game.
-from poi import person_of_interest #halsarc.Game.
-from sol import sign_of_life #halsarc.Game.
-from message import Message #halsarc.Game.
+from halsarc.Game.searcher import searcher #halsarc.Game.
+from halsarc.Game.poi import person_of_interest #halsarc.Game.
+from halsarc.Game.sol import sign_of_life #halsarc.Game.
+from halsarc.Game.message import Message #halsarc.Game.
 
 class Button():
   def __init__(self, callback, x, y, text, font, w=None, h=None, color=[200,200,250], text_color=[255,255,255], hover_color=None, image=None, args=None):
