@@ -1018,7 +1018,7 @@ class sar_env():
         #input()
         reward += obj.saved_reward
         obj.saved = True
-        #print(f"{self.agent_type_names[agent.a_type]} in {obj.save_by}")
+        print(f"{self.agent_type_names[agent.a_type]} in {obj.save_by}")
       #else:
         #print(f"{self.agent_type_names[agent.a_type]} not in {obj.save_by}")
     self.rewards[agent.id]+=reward
@@ -1142,7 +1142,7 @@ if __name__ == "__main__":
   pois = ["Child", "Child", "Adult"]
   premade_map = np.load("../LevelGen/Island/Map.npy")
   game = sar_env(max_agents=3,display=True, tile_map=premade_map, 
-                 agent_names=agents, poi_names=pois,player=1,
+                 agent_names=agents, poi_names=pois,player=0,
                  explore_multiplier=0.005, seed=random.randint(0,1000))
   state, info = game.start()
   controller = player_controller(None)
