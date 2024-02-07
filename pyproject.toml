@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "halsarc"
-version = "0.2.6"
+version = "0.4.0"
 authors = [
   { name="Timothy Flavin", email="timothy.c.flavin@gmail.com" },
 ]

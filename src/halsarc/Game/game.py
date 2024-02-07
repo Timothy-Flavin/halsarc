@@ -396,13 +396,22 @@ class sar_env():
     self.player_input = {'W': False, 'A': False, 'S':False, 'D': False}
     self.reset()
     self.commanded_size = max_agents + len(self.agent_types)+2
-
-    self.msg_state_size = 2 #+ 3 + 8 #queue status and legality
-    self.vec_state_size = 4*self.max_agents + 3 + math.pow((2*self.max_agent_view_dist+1),2)*4 + self.msg_state_size
-    self.vec_state_small_size = 4*self.max_agents + 3 + 9*4 + self.msg_state_size
-    self.boid_state_size = 4*self.max_agents + 3 + 8 + self.msg_state_size
+    ma2 = self.max_agents*self.max_agents 
+    view_size = math.pow((2*self.max_agent_view_dist+1),2)*4
+    poi_state_size =  4*self.max_agents + 3
+                          #listened         #pending_commands   #legality   
+    self.msg_state_size = self.max_agents + self.max_agents*4 + 8    #2 #+ 3 + 8 #queue status and legality
+    
+    self.vec_state_size = poi_state_size + view_size + self.msg_state_size
+    self.vec_state_small_size = poi_state_size + 9*4 + self.msg_state_size
+    self.boid_state_size = poi_state_size + 8 + self.msg_state_size
 
     print(f"vec_state_size: {self.vec_state_size}, vec_state_small_size: {self.vec_state_small_size}, boid_state_size: {self.boid_state_size}")
+    print(f"  Vecotrizer: view_state_size: {view_size}, object state size: {poi_state_size}, radio state: {self.msg_state_size}")
+    print(f"  Small Vec:  view_state_size: {9*4}, object state size: {poi_state_size}, radio state: {self.msg_state_size}")
+    print(f"  Boid:       view_state_size: {8}, object state size: {poi_state_size}, radio state: {self.msg_state_size}")
+    
+
 
   def __reset_state_constants__(self):
     self.rewards = np.zeros(self.max_agents)
@@ -504,114 +513,6 @@ class sar_env():
       if self.display:
         self.handle_key_press(event)
         self.handle_mouse_event(event)
-
-  def __chatter_old__(self, messages):
-    rng = np.arange(0,len(self.agents),1)
-    np.random.shuffle(rng)
-    sent = False
-    for m in rng:
-      #print(messages[m,2]) 
-      if messages[m,2] < 0.5:
-        self.agents[m].message_state = np.array([0,0,1])
-        continue
-      elif sent:
-        self.agents[m].message_state = np.array([0,1,0])
-        continue
-      self.agents[m].message_state = np.array([1,0,0])
-      #print("sup")
-      a = self.agents[m]
-      mtp = np.argmax(messages[m,6:14]*a.legal_messages)
-      act = messages[m,3:5]
-      msg = Message(
-        self,
-        self.agents[m].name,
-        mtp,
-        a.pos[0],
-        a.pos[1],
-        act[0],
-        act[1],
-        a.a_num,
-        a.brain_name,
-        self.agents[np.argmax(messages[m,14:14+len(self.agents)])].name,
-        a.poi,
-        messages[m,5]
-      )
-      msg.__send__()
-      if mtp <6: # this makes it so messages can only be sent the once
-        #print("sent so illegal")
-        a.legal_messages[mtp]=0
-        if mtp == 2 or mtp == 3:
-          if mtp == 3:
-            for t_agent in self.agents:
-              # x,y,saveable
-              for svb in self.pois[a.poi].save_by:
-                if self.agent_names[t_agent.a_type] == svb:
-                  t_agent.p_state[2] = 1
-                  t_agent.p_state[0:2] = self.norm_pos(self.pois[a.poi].pos)
-                  t_agent.save_target = a.poi
-        if mtp == 4:
-          for t_agent in self.agents:
-            if t_agent.save_target == a.poi: # if this thing is saved then return the poi info to 0
-              t_agent.p_state = np.zeros(3)
-              t_agent.save_target = -1
-            #print(f"{a.name} said that {self.pois[a.poi].name} ({a.poi}) can be saved by {self.pois[a.poi].save_by}")
-            #for t_agent in self.agents:
-              #print(f"Resulting poi state: {t_agent.p_state}")
-            #input()
-          a.poi = -1
-     
-        if mtp == 5 and a.commanded > 0:
-          a.command_accepted = True
-
-      if mtp == 7:
-        targ = np.argmax(messages[m,14:14+len(self.agents)])
-        self.agents[targ].legal_messages[5]=1
-        self.agents[targ].commanded_by = a.a_num
-        if self.agents[targ].commanded <=0:
-          self.agents[targ].commanded = messages[m,5]
-          self.agents[targ].command_dir = messages[m,3:5]
-          self.agents[targ].command_frame = self.frame_num
-     #print(f"Messanger: [{m}], {self.agents[m].name}")
-      for i,ag in enumerate(self.agents):
-       #print(f"agent[{i}] updates {ag.__i_adjust__(m)}")
-        if True: #Can use radio TODO
-          ag.a_state[ag.__i_adjust__(m),0] = a.pos[0]
-          ag.a_state[ag.__i_adjust__(m),1] = a.pos[1]
-          ag.a_state[ag.__i_adjust__(m),2] = 0
-          ag.a_state[ag.__i_adjust__(m),3] = 0
-          if mtp == 6:
-            ag.a_state[ag.__i_adjust__(m),2] = act[0]
-            ag.a_state[ag.__i_adjust__(m),3] = act[1]
-      #input()
-      atp = np.zeros(self.num_agent_types)
-      atp[a.a_type] = 1 
-      target = np.zeros(self.max_agents)
-      target[a.a_num] = 1
-      self.radio = {
-        "message": 
-        np.concatenate(
-          (
-            np.array([
-            a.pos[0]/self.map_pixel_width,
-            a.pos[1]/self.map_pixel_height,
-            act[0], 
-            act[1],
-            messages[m,5]
-            ]), 
-            messages[m,6:15],
-            target,
-            atp
-          )
-        ),
-        "sender":[
-          np.zeros(self.max_agents),
-          np.zeros(len(self.agent_types)),
-          self.agents[m].brain_name
-        ],
-        "queue_status":[],
-        "message_legality":[],
-        "commanded_by":[],
-      } 
 
   def __chatter__(self, messages):
     sent = False
@@ -821,7 +722,7 @@ class sar_env():
       view_ranges.append(a.effective_view_range)
     #print(listened)
     state = {"view":map_state,"object_state":object_state,"legal_messages":self.legal_messages,"pending_commands":self.pending_commands,"listened":listened,"view_ranges":view_ranges}
-    return  state
+    return state
   
   def norm_pos(self,pos):
     return np.array([pos[0]/self.map_pixel_width*2,pos[1]/self.map_pixel_height*2])-1
@@ -1041,14 +942,18 @@ class sar_env():
             #state['radio']['commanded_by'][anum]
           #)
     #a3 = state['memory'][anum].flatten()
-    a3 = state['radio']['commanded_by'][anum] #np.concatenate(
-          #cat
-        #)
+    a3 = np.concatenate(
+          (
+            state['legal_messages'][anum].flatten(),
+            state['pending_commands'][anum].flatten(),
+            state['listened'][anum].flatten(),
+          )
+        )
     if not radio:
       a3 = np.zeros(a3.shape)
 
     v_state = np.concatenate((a1,a2,a3)).astype(np.double)
-    #print(f"Vstate shape from game: {v_state.shape}")
+    #print(f"Vstate shape from game: {a1.shape}+{a2.shape}+{a3.shape} = {v_state.shape}")
     return v_state
   
   def vectorize_state(state,anum,radio=False):
@@ -1170,14 +1075,10 @@ if __name__ == "__main__":
 
       #actions[i,2:] = np.random.random(12+len(agents))
     state, rewards, terminated, truncated, info = game.step(actions=actions)
-    #print(state['view'][0])
-    #print(state['object_state'][0])
-    #sar_env.boid_state(state, 0, True)
     #print(sar_env.vectorize_state(state,0,True).shape)
     #print(sar_env.vectorize_state_small(state,0,True).shape)
     #print(sar_env.boid_state(state,0,True).shape)
-    #print(f"small state: {sv}")
-    #input()
+
     rew += rewards
     game.wait(100)
   print(rew)
